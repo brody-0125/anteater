@@ -5,8 +5,10 @@ This document provides comprehensive configuration examples and usage patterns f
 ## Table of Contents
 
 - [Quick Start](#quick-start)
+- [Neural Analysis Setup](#neural-analysis-setup)
 - [Configuration File](#configuration-file)
 - [Style Rules](#style-rules)
+- [Technical Debt](#technical-debt)
 - [Metrics Thresholds](#metrics-thresholds)
 - [CLI Usage](#cli-usage)
 - [Library Usage](#library-usage)
@@ -32,6 +34,104 @@ Run analysis:
 
 ```bash
 anteater rules --path lib
+```
+
+---
+
+## Neural Analysis Setup
+
+### Prerequisites
+
+Neural analysis requires ONNX Runtime native library and model files.
+
+#### Install ONNX Runtime
+
+```bash
+# macOS (recommended)
+brew install onnxruntime
+
+# Linux (Ubuntu/Debian)
+sudo apt install libonnxruntime-dev
+
+# Or download from GitHub releases
+# https://github.com/microsoft/onnxruntime/releases
+```
+
+#### Download Model Files
+
+Download to `~/.anteater/` (recommended for global installation):
+
+```bash
+mkdir -p ~/.anteater
+
+# Download ONNX model (~522MB)
+curl -L -o ~/.anteater/model.onnx https://huggingface.co/michael-sigamani/nomic-embed-text-onnx/resolve/main/model.onnx
+
+# Download vocabulary (~226KB)
+curl -L -o ~/.anteater/vocab.txt https://huggingface.co/nomic-ai/nomic-embed-text-v1/resolve/main/vocab.txt
+```
+
+Or download to your project's `model/` directory for local use:
+
+```bash
+mkdir -p model
+curl -L -o model/model.onnx https://huggingface.co/michael-sigamani/nomic-embed-text-onnx/resolve/main/model.onnx
+curl -L -o model/vocab.txt https://huggingface.co/nomic-ai/nomic-embed-text-v1/resolve/main/vocab.txt
+```
+
+**Model file search order:**
+1. Custom path via `--model`/`--vocab` options
+2. Current directory: `./model/model.onnx`
+3. Home directory: `~/.anteater/model.onnx`
+
+#### Verify Installation
+
+```bash
+# Check ONNX Runtime installation
+ls -la /opt/homebrew/lib/libonnxruntime.dylib  # macOS (Apple Silicon)
+ls -la /usr/local/lib/libonnxruntime.dylib     # macOS (Intel)
+ls -la /usr/lib/libonnxruntime.so              # Linux
+
+# Check model files
+ls -lh ~/.anteater/
+# Expected:
+# model.onnx  (~522MB)
+# vocab.txt   (~226KB)
+```
+
+### Usage
+
+```dart
+import 'package:anteater/neural/inference/onnx_runtime.dart';
+import 'package:dart_bert_tokenizer/dart_bert_tokenizer.dart';
+
+void main() async {
+  // Load tokenizer
+  final tokenizer = WordPieceTokenizer.fromVocabFileSync('model/vocab.txt');
+
+  // Load ONNX runtime
+  final runtime = NativeOnnxRuntime();
+  await runtime.loadModel('model/model.onnx');
+
+  // Create clone detector
+  final detector = SemanticCloneDetector(
+    runtime: runtime,
+    tokenizer: tokenizer,
+    similarityThreshold: 0.85,
+  );
+
+  // Index functions
+  await detector.indexFunction('func1', 'int add(int a, int b) => a + b;');
+  await detector.indexFunction('func2', 'int sum(int x, int y) => x + y;');
+
+  // Find clones
+  final clones = await detector.findClones('func1', 'int add(int a, int b) => a + b;');
+  for (final clone in clones) {
+    print('${clone.functionId}: ${(clone.similarity * 100).toStringAsFixed(1)}%');
+  }
+
+  runtime.dispose();
+}
 ```
 
 ---
@@ -353,6 +453,100 @@ if ('admin' == role) {}           // Info - prefer: role == 'admin'
 
 ---
 
+## Technical Debt
+
+### Basic Debt Configuration
+
+```yaml
+anteater:
+  debt:
+    # Threshold in hours - CI fails if exceeded
+    threshold: 40
+
+    # Unit of measurement
+    unit: hours  # or 'story_points'
+```
+
+### Custom Cost Configuration
+
+```yaml
+anteater:
+  debt:
+    threshold: 100
+    unit: hours
+
+    # Override default costs per debt type
+    costs:
+      todo: 2.0           # Default: 4.0
+      fixme: 4.0          # Default: 8.0
+      ignore: 6.0         # Default: 8.0
+      ignore-for-file: 12.0  # Default: 16.0
+      as-dynamic: 8.0     # Default: 16.0
+      deprecated: 2.0     # Default: 4.0
+      low-maintainability: 4.0  # Default: 8.0
+      high-complexity: 2.0      # Default: 4.0
+      long-method: 2.0          # Default: 4.0
+      duplicate-code: 4.0       # Default: 8.0
+```
+
+### Metrics-Based Debt Thresholds
+
+Configure when metrics violations become debt items:
+
+```yaml
+anteater:
+  debt:
+    metrics-thresholds:
+      maintainability-index: 50    # MI below this = lowMaintainability debt
+      cyclomatic-complexity: 20    # CC above this = highComplexity debt
+      cognitive-complexity: 15     # (not yet implemented)
+      lines-of-code: 50            # LOC above this = longMethod debt
+```
+
+### Strict Configuration (Lower Threshold)
+
+```yaml
+anteater:
+  debt:
+    threshold: 20
+    costs:
+      todo: 4.0
+      fixme: 8.0
+      ignore-for-file: 24.0  # Higher penalty
+```
+
+### Relaxed Configuration (Higher Threshold)
+
+```yaml
+anteater:
+  debt:
+    threshold: 200
+    costs:
+      todo: 1.0
+      fixme: 2.0
+```
+
+### CLI Usage
+
+```bash
+# Basic debt analysis
+anteater debt --path lib
+
+# JSON output for programmatic processing
+anteater debt --path lib --format json
+
+# Markdown report for documentation
+anteater debt --path lib --format markdown --output DEBT.md
+
+# CI gate - exit with error if threshold exceeded
+anteater debt --path lib --threshold 50 --fail-on-threshold
+
+# Quiet mode
+anteater debt --path lib --quiet
+```
+
+---
+
 ## Metrics Thresholds
 
 ### Default Values
@@ -560,6 +754,12 @@ jobs:
       - name: Run metrics
         run: anteater metrics --path lib --format json > metrics-report.json
 
+      - name: Run debt analysis
+        run: anteater debt --path lib --format json > debt-report.json
+
+      - name: Check debt threshold
+        run: anteater debt --path lib --threshold 100 --fail-on-threshold
+
       - name: Check for violations
         run: anteater analyze --path lib --no-fatal-infos
 ```
@@ -574,6 +774,7 @@ anteater:
     - dart pub global activate anteater
     - anteater rules --path lib
     - anteater metrics --path lib
+    - anteater debt --path lib --threshold 100 --fail-on-threshold
   artifacts:
     reports:
       codequality: anteater-report.json

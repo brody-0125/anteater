@@ -1,7 +1,7 @@
 # Anteater
 
 <p align="center">
-  <img src="./resources/logo.png" alt="Anteater Logo" width="300">
+  <img src="resource/logo.png" alt="Anteater Logo" width="300">
 </p>
 
 **Static Analysis Engine for Dart**
@@ -10,6 +10,7 @@ Anteater is a static analyzer for Dart that provides SSA-based data flow analysi
 
 ## Features
 
+- **Technical Debt Analysis**: Detect and quantify technical debt with configurable cost model
 - **Style Consistency Rules**: 10 lint rules for code quality and safety
 - **SSA-Based Data Flow Analysis**: Braun et al. algorithm for efficient SSA construction with lazy phi insertion
 - **Datalog Reasoning Engine**: Points-to analysis, taint tracking, and immutability verification
@@ -28,6 +29,38 @@ cd anteater
 # Install dependencies
 dart pub get
 ```
+
+### Neural Analysis Setup (Optional)
+
+For semantic clone detection using neural embeddings:
+
+```bash
+# macOS
+brew install onnxruntime
+
+# Linux (Ubuntu/Debian)
+apt install libonnxruntime-dev
+
+# Or download from GitHub releases
+# https://github.com/microsoft/onnxruntime/releases
+```
+
+Download model files to `~/.anteater/` (recommended for global installation):
+
+```bash
+mkdir -p ~/.anteater
+
+# Download ONNX model (~522MB)
+curl -L -o ~/.anteater/model.onnx https://huggingface.co/michael-sigamani/nomic-embed-text-onnx/resolve/main/model.onnx
+
+# Download vocabulary (~226KB)
+curl -L -o ~/.anteater/vocab.txt https://huggingface.co/nomic-ai/nomic-embed-text-v1/resolve/main/vocab.txt
+```
+
+Anteater searches for model files in this order:
+1. Custom path via `--model`/`--vocab` options
+2. Current directory: `./model/model.onnx`
+3. Home directory: `~/.anteater/model.onnx`
 
 ## Usage
 
@@ -75,11 +108,76 @@ anteater metrics --path lib --threshold-cognitive 10 --threshold-loc 80
 anteater metrics --path lib --watch
 ```
 
+### Analyze Technical Debt
+
+```bash
+# Analyze technical debt with default cost model
+anteater debt --path lib
+
+# Output as JSON
+anteater debt --path lib --format json
+
+# Generate markdown report
+anteater debt --path lib --format markdown --output debt-report.md
+
+# Custom threshold for CI gate
+anteater debt --path lib --threshold 100 --fail-on-threshold
+
+# Quiet mode for CI pipelines
+anteater debt --path lib --quiet
+```
+
+### Detect Semantic Clones
+
+Requires ONNX Runtime and model files (see [Neural Analysis Setup](#neural-analysis-setup-optional)).
+
+```bash
+# Detect semantically similar code
+anteater clones --path lib
+
+# Custom similarity threshold (default: 0.85)
+anteater clones --path lib --threshold 0.90
+
+# Output as JSON
+anteater clones --path lib --format json
+
+# Custom model paths
+anteater clones --path lib --model path/to/model.onnx --vocab path/to/vocab.txt
+```
+
 ### Start Language Server
 
 ```bash
 anteater server
 ```
+
+## Technical Debt
+
+Anteater detects and quantifies 10 types of technical debt:
+
+| Debt Type | Default Severity | Base Cost (hours) |
+|-----------|------------------|-------------------|
+| TODO comments | Medium | 4 |
+| FIXME comments | High | 8 |
+| `// ignore:` comments | High | 8 |
+| `// ignore_for_file:` comments | Critical | 16 |
+| `as dynamic` casts | High | 16 |
+| `@deprecated` usage | Medium | 4 |
+| Low maintainability (MI < 50) | High | 8 |
+| High complexity (CC > 20) | Medium | 4 |
+| Long methods (LOC > 50) | Medium | 4 |
+| Duplicate code | Medium | 8 |
+
+### Cost Calculation
+
+Total cost = Base Cost x Severity Multiplier
+
+| Severity | Multiplier |
+|----------|------------|
+| Critical | 4.0x |
+| High | 2.0x |
+| Medium | 1.0x |
+| Low | 0.5x |
 
 ## Style Rules
 
@@ -179,6 +277,7 @@ dart pub global activate --source path .
 anteater analyze --path /path/to/project
 anteater metrics --path /path/to/project
 anteater rules --path /path/to/project
+anteater debt --path /path/to/project
 ```
 
 ## Library Usage
@@ -240,6 +339,11 @@ lib/
 │   ├── rule_runner.dart
 │   ├── rule_registry.dart
 │   └── rules/         # Rule implementations
+├── debt/              # Technical debt analysis
+│   ├── debt_item.dart
+│   ├── debt_detector.dart
+│   ├── cost_calculator.dart
+│   └── debt_report.dart
 ├── metrics/           # Code complexity metrics
 ├── neural/            # CodeBERT tokenization (planned)
 └── server/            # LSP server implementation

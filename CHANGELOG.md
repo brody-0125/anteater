@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-12-29
+
+### Added
+
+- **Neural Analysis Setup**: Semantic clone detection using ONNX Runtime
+  - Pre-trained nomic-embed-text model (~522MB) for 768-dimensional embeddings
+  - WordPiece tokenization via `dart_bert_tokenizer`
+  - Model file search order: `--model` option → `./model/` → `~/.anteater/`
+  - Installation instructions for ONNX Runtime (`brew install onnxruntime`)
+- **CLI Command**: `anteater clones --path <path>` for semantic clone detection
+  - Detects semantically similar code (same functionality, different syntax)
+  - Configurable similarity threshold (`--threshold`)
+  - Custom model/vocab paths (`--model`, `--vocab`)
+  - Fallback to `~/.anteater/` for global installation
+  - Output formats: text, json
+- **Technical Debt Cost Model**: Comprehensive debt tracking and cost estimation
+  - `DebtItem` and `DebtType` models with 10 debt types (TODO, FIXME, ignore, as dynamic, etc.)
+  - `DebtSeverity` with configurable cost multipliers (critical: 4x, high: 2x, medium: 1x, low: 0.5x)
+  - `DebtDetector` for detecting debt from comments, casts, annotations, and metrics
+  - `DebtCostCalculator` for item and total cost calculation
+  - `DebtReport` with Markdown, JSON, and console output formats
+  - `DebtAggregator` for project-level aggregation and hotspot analysis
+  - `DebtTrend` for tracking debt changes over time
+- **CLI Command**: `anteater debt --path <path>` for technical debt analysis
+  - Output formats: text, json, markdown
+  - Threshold-based CI gate with `--fail-on-threshold`
+  - Customizable threshold with `--threshold` flag
+- **Debt Configuration**: YAML configuration for debt costs and thresholds
+  - Per-type cost configuration
+  - Metrics-based debt thresholds (MI, complexity, LOC)
+  - Configurable unit of measurement (hours, story points)
+
 ## [0.2.0] - 2025-12-28
 
 ### Added
