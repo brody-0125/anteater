@@ -1,0 +1,43 @@
+# Development and CI files
+.github/
+.claude/
+.idea/
+.vscode/
+
+# Test files (keep test/ but exclude coverage)
+coverage/
+.test_coverage.dart
+
+# Documentation source (keep doc/screenshots for pub.dev)
+doc/api/
+
+# Build artifacts
+build/
+native/build/
+*.so
+*.dll
+*.dylib
+
+# Large model files (users download separately)
+model/
+
+# Local configuration
+.env
+.env.local
+*.local.yaml
+CLAUDE.md
+
+# Logs
+*.log
+logs/
+
+# Example projects (if any)
+example_projects/
+
+# Benchmarks
+benchmark/
+
+# Editor files
+*.swp
+*.swo
+*~

@@ -89,7 +89,7 @@ class Anteater {
     try {
       return await server.analyzeProject();
     } finally {
-      server.shutdown();
+      await server.shutdown();
     }
   }
 

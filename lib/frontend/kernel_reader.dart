@@ -9,7 +9,7 @@ class KernelReader {
   /// Loads a kernel binary from file.
   Future<KernelProgram?> loadFromFile(String dillPath) async {
     final file = File(dillPath);
-    if (!await file.exists()) {
+    if (!file.existsSync()) {
       return null;
     }
 

@@ -1,6 +1,8 @@
 import 'package:test/test.dart';
 import 'package:anteater/neural/inference/onnx_runtime.dart';
 
+import 'mock_onnx_runtime.dart';
+
 void main() {
   group('OnnxRuntime', () {
     group('cosineSimilarity', () {

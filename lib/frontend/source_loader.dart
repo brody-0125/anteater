@@ -86,7 +86,7 @@ class SourceLoader {
   Future<CompilationUnit?> parseFile(String filePath) async {
     final absolutePath = path.absolute(filePath);
     final context = _contextCollection.contextFor(absolutePath);
-    final result = await context.currentSession.getParsedUnit(absolutePath);
+    final result = context.currentSession.getParsedUnit(absolutePath);
 
     if (result is ParsedUnitResult) {
       return result.unit;

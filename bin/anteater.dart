@@ -2,11 +2,20 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:args/args.dart';
-import 'package:anteater/server/language_server.dart';
-import 'package:anteater/metrics/metrics_aggregator.dart';
+import 'package:anteater/debt/debt_aggregator.dart';
+import 'package:anteater/debt/debt_config.dart';
+import 'package:anteater/debt/debt_item.dart';
 import 'package:anteater/frontend/source_loader.dart';
+import 'package:anteater/metrics/maintainability_index.dart';
+import 'package:anteater/metrics/metrics_aggregator.dart';
+import 'package:anteater/neural/inference/onnx_ffi.dart';
+import 'package:anteater/neural/inference/onnx_runtime.dart';
+import 'package:anteater/server/language_server.dart';
 import 'package:anteater/version.dart';
+import 'package:dart_bert_tokenizer/dart_bert_tokenizer.dart';
 import 'package:path/path.dart' as p;
 import 'package:yaml/yaml.dart';
 
@@ -15,6 +24,8 @@ void main(List<String> arguments) async {
   final parser = ArgParser()
     ..addCommand('analyze')
     ..addCommand('metrics')
+    ..addCommand('debt')
+    ..addCommand('clones')
     ..addCommand('server')
     ..addFlag('help', abbr: 'h', help: 'Show this help message')
     ..addFlag('version', abbr: 'v', help: 'Show version');
@@ -89,6 +100,73 @@ void main(List<String> arguments) async {
       help: 'Do not treat warning level issues as fatal',
     );
 
+  final debtParser = ArgParser()
+    ..addOption('path', abbr: 'p', defaultsTo: '.', help: 'Path to analyze')
+    ..addOption(
+      'format',
+      abbr: 'f',
+      defaultsTo: 'text',
+      allowed: ['text', 'json', 'markdown'],
+      help: 'Output format',
+    )
+    ..addOption(
+      'output',
+      abbr: 'o',
+      help: 'Output file path',
+    )
+    ..addOption(
+      'threshold',
+      help: 'Cost threshold (overrides analysis_options.yaml)',
+    )
+    ..addFlag(
+      'quiet',
+      abbr: 'q',
+      help: 'Suppress progress output',
+    )
+    ..addFlag(
+      'fail-on-threshold',
+      defaultsTo: true,
+      help: 'Exit with code 1 if threshold exceeded',
+    );
+
+  final clonesParser = ArgParser()
+    ..addOption('path', abbr: 'p', defaultsTo: '.', help: 'Path to analyze')
+    ..addOption(
+      'format',
+      abbr: 'f',
+      defaultsTo: 'text',
+      allowed: ['text', 'json'],
+      help: 'Output format',
+    )
+    ..addOption(
+      'output',
+      abbr: 'o',
+      help: 'Output file path',
+    )
+    ..addOption(
+      'threshold',
+      abbr: 't',
+      defaultsTo: '0.85',
+      help: 'Similarity threshold (0.0-1.0)',
+    )
+    ..addOption(
+      'model',
+      abbr: 'm',
+      defaultsTo: 'model/model.onnx',
+      help: 'Path to ONNX model file',
+    )
+    ..addOption(
+      'vocab',
+      abbr: 'V',
+      defaultsTo: 'model/vocab.txt',
+      help: 'Path to vocabulary file',
+    )
+    ..addFlag(
+      'quiet',
+      abbr: 'q',
+      help: 'Suppress progress output',
+    );
+
   try {
     final results = parser.parse(arguments);
 
@@ -113,6 +191,12 @@ void main(List<String> arguments) async {
         break;
       case 'metrics':
         await _runMetrics(metricsParser.parse(results.command!.arguments));
+        break;
+      case 'debt':
+        await _runDebt(debtParser.parse(results.command!.arguments));
+        break;
+      case 'clones':
+        await _runClones(clonesParser.parse(results.command!.arguments));
         break;
       case 'server':
         await _runServer();
@@ -143,6 +227,16 @@ Commands:
             Options: -p/--path, --threshold-cc, --threshold-mi,
                      --threshold-cognitive, --threshold-loc,
                      -w/--watch, --no-fatal-warnings
+
+  debt      Analyze technical debt and calculate cost
+            Options: -p/--path, -f/--format (text|json|markdown), -o/--output,
+                     --threshold, --fail-on-threshold
+
+  clones    Detect semantic code clones using neural analysis
+            Options: -p/--path, -f/--format (text|json), -o/--output,
+                     -t/--threshold (0.0-1.0), -m/--model, -V/--vocab
+            Requires: ONNX Runtime (brew install onnxruntime)
+                      Model files in model/ directory
 
   server    Start the language server (LSP mode)
 
@@ -189,7 +283,7 @@ Future<void> _runAnalyze(ArgResults args) async {
       print(report);
     }
 
-    server.shutdown();
+    await server.shutdown();
 
     // Determine exit code based on fatal flags
     if (result.errorCount > 0) {
@@ -309,9 +403,6 @@ Future<void> _runMetrics(ArgResults args) async {
   final path = args['path'] as String;
   final watch = args['watch'] as bool;
   final quiet = args['quiet'] as bool;
-  // Note: noFatalInfos is parsed but not used since metrics don't have
-  // info-level severity. Reserved for future use.
-  final _ = args['no-fatal-infos'] as bool;
   final noFatalWarnings = args['no-fatal-warnings'] as bool;
 
   // Validate path exists
@@ -370,7 +461,7 @@ Future<void> _runMetrics(ArgResults args) async {
     final report = aggregator.generateReport();
     print(report);
 
-    sourceLoader.dispose();
+    await sourceLoader.dispose();
 
     // Determine exit code based on fatal flags and violations
     if (report.hasViolations) {
@@ -389,6 +480,503 @@ Future<void> _runMetrics(ArgResults args) async {
     if (exitCode != 0) {
       exit(exitCode);
     }
+  }
+}
+
+Future<void> _runDebt(ArgResults args) async {
+  final path = args['path'] as String;
+  final format = args['format'] as String;
+  final output = args['output'] as String?;
+  final quiet = args['quiet'] as bool;
+  final failOnThreshold = args['fail-on-threshold'] as bool;
+
+  // Validate path exists
+  if (!Directory(path).existsSync() && !File(path).existsSync()) {
+    stderr.writeln('Error: Path not found: $path');
+    exit(66); // EX_NOINPUT
+  }
+
+  // Load configuration
+  final debtOptions = _loadDebtOptions(path);
+  final threshold = args['threshold'] != null
+      ? double.parse(args['threshold'] as String)
+      : debtOptions.threshold;
+
+  final config = DebtCostConfig(
+    costs: debtOptions.costs,
+    multipliers: debtOptions.multipliers,
+    unit: debtOptions.unit,
+    threshold: threshold,
+    metricsThresholds: debtOptions.metricsThresholds,
+    exclude: debtOptions.exclude,
+  );
+
+  if (!quiet) {
+    print('Analyzing technical debt in $path...\n');
+    print('Threshold: $threshold ${config.unit}\n');
+  }
+
+  final sourceLoader = SourceLoader(path);
+  final aggregator = DebtAggregator(config: config);
+  final miCalculator = MaintainabilityIndexCalculator();
+
+  final files = sourceLoader.discoverDartFiles();
+  var processed = 0;
+
+  for (final file in files) {
+    // Check exclusions
+    if (_isExcluded(file, config.exclude)) continue;
+
+    final result = await sourceLoader.resolveFile(file);
+    if (result == null) continue;
+
+    final metrics = miCalculator.calculateForFile(result.unit);
+    aggregator.addFile(
+      file,
+      result.unit,
+      lineInfo: result.lineInfo,
+      metrics: metrics,
+    );
+    processed++;
+
+    if (!quiet) stdout.write('\rProcessing: $processed/${files.length}');
+  }
+  if (!quiet) print('\n');
+
+  final report = aggregator.generateReport();
+
+  // Format output
+  final reportOutput = switch (format) {
+    'json' => const JsonEncoder.withIndent('  ').convert(report.toJson()),
+    'markdown' => report.toMarkdown(),
+    _ => report.toConsole(),
+  };
+
+  if (output != null) {
+    await File(output).writeAsString(reportOutput);
+    print('Report written to $output');
+  } else {
+    print(reportOutput);
+  }
+
+  await sourceLoader.dispose();
+
+  // Exit code based on threshold
+  if (failOnThreshold && report.summary.exceedsThreshold) {
+    exit(1);
+  }
+}
+
+Future<void> _runClones(ArgResults args) async {
+  final path = args['path'] as String;
+  final format = args['format'] as String;
+  final output = args['output'] as String?;
+  final threshold = double.parse(args['threshold'] as String);
+  final quiet = args['quiet'] as bool;
+
+  // Validate path exists
+  if (!Directory(path).existsSync() && !File(path).existsSync()) {
+    stderr.writeln('Error: Path not found: $path');
+    exit(66); // EX_NOINPUT
+  }
+
+  // Resolve model and vocab paths with fallback locations
+  final modelPath = _resolveModelPath(
+    args['model'] as String,
+    'model.onnx',
+  );
+  final vocabPath = _resolveModelPath(
+    args['vocab'] as String,
+    'vocab.txt',
+  );
+
+  // Check if model and vocab files exist
+  if (modelPath == null) {
+    stderr.writeln('Error: Model file not found.');
+    stderr.writeln('');
+    stderr.writeln('Searched locations:');
+    stderr.writeln('  - ./model/model.onnx (current directory)');
+    stderr.writeln('  - ~/.anteater/model.onnx (home directory)');
+    stderr.writeln('');
+    stderr.writeln('To set up neural analysis:');
+    stderr.writeln('  1. Install ONNX Runtime: brew install onnxruntime');
+    stderr.writeln('  2. Download model files to ~/.anteater/:');
+    stderr.writeln('     mkdir -p ~/.anteater');
+    stderr.writeln('     curl -L -o ~/.anteater/model.onnx https://huggingface.co/'
+        'michael-sigamani/nomic-embed-text-onnx/resolve/main/model.onnx');
+    stderr.writeln('     curl -L -o ~/.anteater/vocab.txt https://huggingface.co/'
+        'nomic-ai/nomic-embed-text-v1/resolve/main/vocab.txt');
+    stderr.writeln('');
+    stderr.writeln('  Or specify custom paths with --model and --vocab options.');
+    exit(66);
+  }
+
+  if (vocabPath == null) {
+    stderr.writeln('Error: Vocabulary file not found.');
+    stderr.writeln('');
+    stderr.writeln('Searched locations:');
+    stderr.writeln('  - ./model/vocab.txt (current directory)');
+    stderr.writeln('  - ~/.anteater/vocab.txt (home directory)');
+    exit(66);
+  }
+
+  // Try to load ONNX Runtime
+  final onnxFfi = OnnxFfi.tryLoadDefault();
+  if (onnxFfi == null) {
+    stderr.writeln('Error: ONNX Runtime library not found.');
+    stderr.writeln('');
+    stderr.writeln('Install ONNX Runtime:');
+    stderr.writeln('  macOS:  brew install onnxruntime');
+    stderr.writeln('  Linux:  apt install libonnxruntime-dev');
+    stderr.writeln('  Or download from: https://github.com/'
+        'microsoft/onnxruntime/releases');
+    exit(1);
+  }
+
+  if (!quiet) {
+    print('Detecting semantic clones in $path...');
+    print('Model: $modelPath');
+    print('Threshold: ${(threshold * 100).toStringAsFixed(0)}%\n');
+  }
+
+  // Load tokenizer
+  final tokenizer = WordPieceTokenizer.fromVocabFileSync(vocabPath);
+
+  // Load runtime and detector
+  final runtime = NativeOnnxRuntime();
+  await runtime.loadModel(modelPath);
+
+  final detector = SemanticCloneDetector(
+    runtime: runtime,
+    tokenizer: tokenizer,
+    similarityThreshold: threshold,
+  );
+
+  // Discover and analyze functions
+  final sourceLoader = SourceLoader(path);
+  final files = sourceLoader.discoverDartFiles();
+  final functions = <_FunctionInfo>[];
+
+  var processed = 0;
+  for (final file in files) {
+    final result = await sourceLoader.resolveFile(file);
+    if (result == null) continue;
+
+    // Extract functions from the file
+    final visitor = _FunctionExtractor(file);
+    result.unit.visitChildren(visitor);
+    functions.addAll(visitor.functions);
+
+    processed++;
+    if (!quiet) stdout.write('\rIndexing: $processed/${files.length}');
+  }
+  if (!quiet) print('\n');
+
+  // Index all functions
+  if (!quiet) print('Indexing ${functions.length} functions...');
+  for (final func in functions) {
+    await detector.indexFunction(func.id, func.code);
+  }
+
+  // Find clones
+  if (!quiet) print('Finding clones...\n');
+  final clones = <_ClonePair>[];
+
+  for (var i = 0; i < functions.length; i++) {
+    final func = functions[i];
+    final candidates = await detector.findClones(func.id, func.code);
+
+    for (final candidate in candidates) {
+      // Avoid duplicate pairs (only report A->B, not B->A)
+      if (func.id.compareTo(candidate.functionId) < 0) {
+        final other = functions.firstWhere((f) => f.id == candidate.functionId);
+        clones.add(_ClonePair(
+          source: func,
+          target: other,
+          similarity: candidate.similarity,
+        ));
+      }
+    }
+
+    if (!quiet) {
+      stdout.write('\rAnalyzing: ${i + 1}/${functions.length}');
+    }
+  }
+  if (!quiet) print('\n');
+
+  // Format output
+  final reportOutput = switch (format) {
+    'json' => _formatClonesJson(clones),
+    _ => _formatClonesText(clones, threshold),
+  };
+
+  if (output != null) {
+    await File(output).writeAsString(reportOutput);
+    print('Report written to $output');
+  } else {
+    print(reportOutput);
+  }
+
+  runtime.dispose();
+  await sourceLoader.dispose();
+}
+
+String _formatClonesText(List<_ClonePair> clones, double threshold) {
+  if (clones.isEmpty) {
+    return 'No semantic clones found above ${(threshold * 100).toStringAsFixed(0)}% threshold.';
+  }
+
+  final buffer = StringBuffer();
+  buffer.writeln('Semantic Clone Detection Results');
+  buffer.writeln('=' * 50);
+  buffer.writeln('Found ${clones.length} clone pair(s)\n');
+
+  // Sort by similarity descending
+  clones.sort((a, b) => b.similarity.compareTo(a.similarity));
+
+  for (final clone in clones) {
+    buffer.writeln('${(clone.similarity * 100).toStringAsFixed(1)}% similar:');
+    buffer.writeln('  ${clone.source.file}:${clone.source.line}');
+    buffer.writeln('    ${clone.source.name}');
+    buffer.writeln('  ${clone.target.file}:${clone.target.line}');
+    buffer.writeln('    ${clone.target.name}');
+    buffer.writeln();
+  }
+
+  return buffer.toString();
+}
+
+String _formatClonesJson(List<_ClonePair> clones) {
+  final data = {
+    'cloneCount': clones.length,
+    'clones': clones.map((c) => {
+      'similarity': c.similarity,
+      'source': {
+        'file': c.source.file,
+        'line': c.source.line,
+        'name': c.source.name,
+      },
+      'target': {
+        'file': c.target.file,
+        'line': c.target.line,
+        'name': c.target.name,
+      },
+    }).toList(),
+  };
+  return const JsonEncoder.withIndent('  ').convert(data);
+}
+
+class _FunctionInfo {
+  final String id;
+  final String name;
+  final String file;
+  final int line;
+  final String code;
+
+  _FunctionInfo({
+    required this.id,
+    required this.name,
+    required this.file,
+    required this.line,
+    required this.code,
+  });
+}
+
+class _ClonePair {
+  final _FunctionInfo source;
+  final _FunctionInfo target;
+  final double similarity;
+
+  _ClonePair({
+    required this.source,
+    required this.target,
+    required this.similarity,
+  });
+}
+
+class _FunctionExtractor extends RecursiveAstVisitor<void> {
+  final String file;
+  final List<_FunctionInfo> functions = [];
+
+  _FunctionExtractor(this.file);
+
+  @override
+  void visitFunctionDeclaration(FunctionDeclaration node) {
+    final name = node.name.lexeme;
+    final line = node.offset; // Approximate, would need LineInfo for exact
+    final code = node.toSource();
+    final id = '$file:$name:$line';
+
+    functions.add(_FunctionInfo(
+      id: id,
+      name: name,
+      file: file,
+      line: line,
+      code: code,
+    ));
+
+    super.visitFunctionDeclaration(node);
+  }
+
+  @override
+  void visitMethodDeclaration(MethodDeclaration node) {
+    final name = node.name.lexeme;
+    final line = node.offset;
+    final code = node.toSource();
+    final id = '$file:$name:$line';
+
+    functions.add(_FunctionInfo(
+      id: id,
+      name: name,
+      file: file,
+      line: line,
+      code: code,
+    ));
+
+    super.visitMethodDeclaration(node);
+  }
+}
+
+bool _isExcluded(String filePath, List<String> patterns) {
+  for (final pattern in patterns) {
+    if (pattern.contains('*')) {
+      // Convert glob to regex
+      final regexPattern = pattern
+          .replaceAll('.', r'\.')
+          .replaceAll('**', '.*')
+          .replaceAll('*', '[^/]*');
+      if (RegExp(regexPattern).hasMatch(filePath)) {
+        return true;
+      }
+    } else if (filePath.contains(pattern)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/// Loads debt configuration from analysis_options.yaml.
+_DebtOptionsConfig _loadDebtOptions(String projectPath) {
+  final optionsFile = File(p.join(projectPath, 'analysis_options.yaml'));
+
+  if (!optionsFile.existsSync()) {
+    return _DebtOptionsConfig.defaults();
+  }
+
+  try {
+    final content = optionsFile.readAsStringSync();
+    final yaml = loadYaml(content) as YamlMap?;
+
+    if (yaml == null) {
+      return _DebtOptionsConfig.defaults();
+    }
+
+    final anteaterConfig = yaml['anteater'] as YamlMap?;
+    if (anteaterConfig == null) {
+      return _DebtOptionsConfig.defaults();
+    }
+
+    final debtConfig = anteaterConfig['technical-debt'] as YamlMap?;
+    if (debtConfig == null) {
+      return _DebtOptionsConfig.defaults();
+    }
+
+    return _DebtOptionsConfig.fromYaml(debtConfig);
+  } catch (e) {
+    stderr.writeln('Warning: Failed to parse analysis_options.yaml: $e');
+    return _DebtOptionsConfig.defaults();
+  }
+}
+
+class _DebtOptionsConfig {
+  final Map<DebtType, double> costs;
+  final Map<DebtSeverity, double> multipliers;
+  final String unit;
+  final double threshold;
+  final DebtMetricsThresholds metricsThresholds;
+  final List<String> exclude;
+
+  _DebtOptionsConfig({
+    required this.costs,
+    required this.multipliers,
+    required this.unit,
+    required this.threshold,
+    required this.metricsThresholds,
+    required this.exclude,
+  });
+
+  factory _DebtOptionsConfig.defaults() {
+    final defaultConfig = DebtCostConfig.defaults();
+    return _DebtOptionsConfig(
+      costs: defaultConfig.costs,
+      multipliers: defaultConfig.multipliers,
+      unit: defaultConfig.unit,
+      threshold: defaultConfig.threshold,
+      metricsThresholds: defaultConfig.metricsThresholds,
+      exclude: defaultConfig.exclude,
+    );
+  }
+
+  factory _DebtOptionsConfig.fromYaml(YamlMap yaml) {
+    final defaults = _DebtOptionsConfig.defaults();
+
+    // Parse costs
+    final costsYaml = yaml['costs'] as YamlMap?;
+    final costs = Map<DebtType, double>.from(defaults.costs);
+    if (costsYaml != null) {
+      for (final entry in costsYaml.entries) {
+        final key = entry.key.toString();
+        final value = entry.value;
+        final debtType = _parseDebtType(key);
+        if (debtType != null && value is num) {
+          costs[debtType] = value.toDouble();
+        }
+      }
+    }
+
+    // Parse exclude
+    final excludeYaml = yaml['exclude'] as YamlList?;
+    final exclude = excludeYaml?.map((e) => e.toString()).toList() ?? defaults.exclude;
+
+    // Parse metrics thresholds
+    final metricsYaml = yaml['metrics'] as YamlMap?;
+    final metricsThresholds = metricsYaml != null
+        ? DebtMetricsThresholds(
+            maintainabilityIndex:
+                (metricsYaml['maintainability-index'] as num?)?.toDouble() ?? 50.0,
+            cyclomaticComplexity:
+                metricsYaml['cyclomatic-complexity'] as int? ?? 20,
+            cognitiveComplexity:
+                metricsYaml['cognitive-complexity'] as int? ?? 15,
+            linesOfCode: metricsYaml['lines-of-code'] as int? ?? 100,
+          )
+        : defaults.metricsThresholds;
+
+    return _DebtOptionsConfig(
+      costs: costs,
+      multipliers: defaults.multipliers,
+      unit: yaml['unit'] as String? ?? defaults.unit,
+      threshold: (yaml['threshold'] as num?)?.toDouble() ?? defaults.threshold,
+      metricsThresholds: metricsThresholds,
+      exclude: exclude,
+    );
+  }
+
+  static DebtType? _parseDebtType(String key) {
+    final normalized = key.replaceAll('-', '').toLowerCase();
+    for (final type in DebtType.values) {
+      if (type.name.toLowerCase() == normalized) return type;
+    }
+    return switch (normalized) {
+      'ignore' => DebtType.ignoreComment,
+      'ignoreforfile' => DebtType.ignoreForFile,
+      'asdynamic' => DebtType.asDynamic,
+      'lowmaintainability' => DebtType.lowMaintainability,
+      'highcomplexity' => DebtType.highComplexity,
+      'longmethod' => DebtType.longMethod,
+      'duplicatecode' => DebtType.duplicateCode,
+      _ => null,
+    };
   }
 }
 
@@ -494,4 +1082,48 @@ Future<void> _runServer() async {
   // For now, just keep the process running
   await ProcessSignal.sigint.watch().first;
   print('\nShutting down...');
+}
+
+/// Resolves model file path with fallback locations.
+///
+/// Search order:
+/// 1. If [cliPath] is not the default, use it as-is (user specified)
+/// 2. Current working directory: ./model/[filename]
+/// 3. User home directory: ~/.anteater/[filename]
+///
+/// Returns null if file not found in any location.
+String? _resolveModelPath(String cliPath, String filename) {
+  // Check if user specified a custom path (not the default)
+  final defaultPath = 'model/$filename';
+  if (cliPath != defaultPath) {
+    // User specified a custom path, use it directly
+    if (File(cliPath).existsSync()) {
+      return cliPath;
+    }
+    return null;
+  }
+
+  // Search in default locations
+  final searchPaths = [
+    // Current working directory
+    'model/$filename',
+    // User home directory
+    _getHomePath('.anteater/$filename'),
+  ];
+
+  for (final path in searchPaths) {
+    if (path != null && File(path).existsSync()) {
+      return path;
+    }
+  }
+
+  return null;
+}
+
+/// Returns path relative to user's home directory.
+String? _getHomePath(String relativePath) {
+  final home = Platform.environment['HOME'] ??
+      Platform.environment['USERPROFILE'];
+  if (home == null) return null;
+  return p.join(home, relativePath);
 }

@@ -2,7 +2,7 @@ name: anteater
 description: >-
   Anteater is a static analyzer for Dart that provides SSA-based data flow analysis, Datalog-based reasoning, 
   code metrics, and configurable lint rules.
-version: 0.2.0
+version: 0.3.0
 repository: https://github.com/hyeonLewis/anteater
 issue_tracker: https://github.com/hyeonLewis/anteater/issues
 documentation: https://github.com/hyeonLewis/anteater#readme
