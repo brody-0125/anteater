@@ -1,0 +1,51 @@
+# Claude Code configuration (private)
+.claude/
+CLAUDE.md
+
+# Dart/Flutter
+.dart_tool/
+.packages
+build/
+pubspec.lock
+
+# Generated files
+*.g.dart
+*.freezed.dart
+*.mocks.dart
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage
+coverage/
+.test_coverage.dart
+
+# Documentation
+doc/api/
+
+# Native build artifacts
+native/build/
+*.so
+*.dll
+*.dylib
+
+# ONNX models (large files, users download separately)
+model/*.onnx
+
+# Local configuration
+.env
+.env.local
+*.local.yaml
+
+# Logs
+*.log
+logs/
