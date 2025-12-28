@@ -1,0 +1,124 @@
+// Anteater - Points-to Analysis Rules
+// Compiled with: souffle -c points_to.dl -o libpoints_to
+
+// ============================================================
+// Input Relations (EDB - Extensional Database)
+// ============================================================
+
+// Variable assignment: Assign(target_var, source_expr)
+.decl Assign(var: number, expr: number)
+.input Assign
+
+// Object allocation: Alloc(expr_id, heap_object_type)
+.decl Alloc(expr: number, heap: symbol)
+.input Alloc
+
+// Control flow edge: Flow(from_block, to_block)
+.decl Flow(from: number, to: number)
+.input Flow
+
+// Field load: LoadField(base_var, field_name, target_var)
+.decl LoadField(base: number, field: symbol, target: number)
+.input LoadField
+
+// Field store: StoreField(base_var, field_name, source_var)
+.decl StoreField(base: number, field: symbol, source: number)
+.input StoreField
+
+// Method call: Call(call_site, receiver_var, method_name, return_var)
+.decl Call(site: number, receiver: number, method: symbol, ret: number)
+.input Call
+
+// ============================================================
+// Output Relations (IDB - Intensional Database)
+// ============================================================
+
+// Variable points to heap object
+.decl VarPointsTo(var: number, heap: symbol)
+.output VarPointsTo
+
+// Heap object field points to another heap object
+.decl HeapPointsTo(heap: symbol, field: symbol, target: symbol)
+.output HeapPointsTo
+
+// Reachability in control flow
+.decl Reachable(block: number)
+.output Reachable
+
+// Call graph edge
+.decl CallGraph(caller: number, callee: symbol)
+.output CallGraph
+
+// Mutable objects (can be modified)
+.decl Mutable(heap: symbol)
+.output Mutable
+
+// Deeply immutable objects
+.decl DeepImmutable(heap: symbol)
+.output DeepImmutable
+
+// ============================================================
+// Analysis Rules
+// ============================================================
+
+// Rule 1: Object allocation creates points-to relation
+VarPointsTo(var, heap) :-
+    Assign(var, alloc),
+    Alloc(alloc, heap).
+
+// Rule 2: Variable copy propagates points-to
+VarPointsTo(var1, heap) :-
+    Assign(var1, var2),
+    VarPointsTo(var2, heap).
+
+// Rule 3: Field store creates heap points-to
+HeapPointsTo(baseHeap, field, targetHeap) :-
+    StoreField(base, field, source),
+    VarPointsTo(base, baseHeap),
+    VarPointsTo(source, targetHeap).
+
+// Rule 4: Field load follows heap points-to
+VarPointsTo(target, targetHeap) :-
+    LoadField(base, field, target),
+    VarPointsTo(base, baseHeap),
+    HeapPointsTo(baseHeap, field, targetHeap).
+
+// ============================================================
+// Control Flow Reachability
+// ============================================================
+
+// Entry block is reachable (block 0)
+Reachable(0).
+
+// Propagate reachability through flow edges
+Reachable(to) :-
+    Reachable(from),
+    Flow(from, to).
+
+// ============================================================
+// Mutability Analysis
+// ============================================================
+
+// Objects with field stores are mutable
+Mutable(heap) :-
+    StoreField(base, _, _),
+    VarPointsTo(base, heap).
+
+// Objects containing mutable objects are mutable (transitive)
+Mutable(heap) :-
+    HeapPointsTo(heap, _, targetHeap),
+    Mutable(targetHeap).
+
+// Deep immutability: allocated but not mutable
+DeepImmutable(heap) :-
+    Alloc(_, heap),
+    !Mutable(heap).
+
+// ============================================================
+// Call Graph Construction
+// ============================================================
+
+// Virtual method call resolution
+CallGraph(site, method) :-
+    Call(site, receiver, method, _),
+    VarPointsTo(receiver, _).
