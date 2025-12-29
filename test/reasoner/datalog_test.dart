@@ -18,8 +18,8 @@ void main() {
       final block = BasicBlock(id: 0);
       block.addInstruction(AssignInstruction(
         offset: 0,
-        target: Variable('x'),
-        value: VariableValue(Variable('y')),
+        target: const Variable('x'),
+        value: const VariableValue(Variable('y')),
       ));
 
       final cfg = ControlFlowGraph(
@@ -38,8 +38,8 @@ void main() {
       final block = BasicBlock(id: 0);
       block.addInstruction(AssignInstruction(
         offset: 10,
-        target: Variable('list'),
-        value: NewObjectValue(
+        target: const Variable('list'),
+        value: const NewObjectValue(
           typeName: 'List',
           arguments: [],
         ),
@@ -82,9 +82,9 @@ void main() {
       final block = BasicBlock(id: 0);
       block.addInstruction(StoreFieldInstruction(
         offset: 0,
-        base: VariableValue(Variable('obj')),
+        base: const VariableValue(Variable('obj')),
         fieldName: 'name',
-        value: VariableValue(Variable('value')),
+        value: const VariableValue(Variable('value')),
       ));
 
       final cfg = ControlFlowGraph(
@@ -104,9 +104,9 @@ void main() {
       final block = BasicBlock(id: 0);
       block.addInstruction(LoadFieldInstruction(
         offset: 0,
-        base: VariableValue(Variable('obj')),
+        base: const VariableValue(Variable('obj')),
         fieldName: 'length',
-        result: Variable('len'),
+        result: const Variable('len'),
       ));
 
       final cfg = ControlFlowGraph(
@@ -129,8 +129,8 @@ void main() {
       // Add a known instruction type that should be handled
       block.addInstruction(AssignInstruction(
         offset: 0,
-        target: Variable('x'),
-        value: ConstantValue(1),
+        target: const Variable('x'),
+        value: const ConstantValue(1),
       ));
 
       // Add known control flow instruction types that are explicitly skipped
@@ -159,8 +159,8 @@ void main() {
       final block = BasicBlock(id: 0);
       block.addInstruction(AssignInstruction(
         offset: 0,
-        target: Variable('x'),
-        value: ConstantValue(1),
+        target: const Variable('x'),
+        value: const ConstantValue(1),
       ));
       final cfg = ControlFlowGraph(
         functionName: 'test',
@@ -188,8 +188,8 @@ void main() {
     test('tracks simple allocation', () {
       // var x = new List()
       engine.loadFacts([
-        Fact('Assign', [0, 100]), // x = alloc_100
-        Fact('Alloc', [100, 'List#0']), // alloc_100 creates List#0
+        const Fact('Assign', [0, 100]), // x = alloc_100
+        const Fact('Alloc', [100, 'List#0']), // alloc_100 creates List#0
       ]);
 
       engine.run();
@@ -201,9 +201,9 @@ void main() {
     test('tracks variable copy', () {
       // var x = new List(); var y = x;
       engine.loadFacts([
-        Fact('Assign', [0, 100]), // x = alloc_100
-        Fact('Alloc', [100, 'List#0']),
-        Fact('Assign', [1, 0]), // y = x
+        const Fact('Assign', [0, 100]), // x = alloc_100
+        const Fact('Alloc', [100, 'List#0']),
+        const Fact('Assign', [1, 0]), // y = x
       ]);
 
       engine.run();
@@ -219,12 +219,12 @@ void main() {
       // container.item = item
       // var result = container.item
       engine.loadFacts([
-        Fact('Assign', [0, 100]), // container = alloc_100
-        Fact('Alloc', [100, 'Container#0']),
-        Fact('Assign', [1, 101]), // item = alloc_101
-        Fact('Alloc', [101, 'Item#0']),
-        Fact('StoreField', [0, 'item', 1]), // container.item = item
-        Fact('LoadField', [0, 'item', 2]), // result = container.item
+        const Fact('Assign', [0, 100]), // container = alloc_100
+        const Fact('Alloc', [100, 'Container#0']),
+        const Fact('Assign', [1, 101]), // item = alloc_101
+        const Fact('Alloc', [101, 'Item#0']),
+        const Fact('StoreField', [0, 'item', 1]), // container.item = item
+        const Fact('LoadField', [0, 'item', 2]), // result = container.item
       ]);
 
       engine.run();
@@ -245,9 +245,9 @@ void main() {
       // var list = new List()
       // list.add(item) -- represented as StoreField
       engine.loadFacts([
-        Fact('Assign', [0, 100]),
-        Fact('Alloc', [100, 'List#0']),
-        Fact('StoreField', [0, 'elements', 1]), // list.elements = ...
+        const Fact('Assign', [0, 100]),
+        const Fact('Alloc', [100, 'List#0']),
+        const Fact('StoreField', [0, 'elements', 1]), // list.elements = ...
       ]);
 
       engine.run();
@@ -260,8 +260,8 @@ void main() {
       // var immutable = new ImmutableValue()
       // (no field stores)
       engine.loadFacts([
-        Fact('Assign', [0, 100]),
-        Fact('Alloc', [100, 'ImmutableValue#0']),
+        const Fact('Assign', [0, 100]),
+        const Fact('Alloc', [100, 'ImmutableValue#0']),
       ]);
 
       engine.run();
@@ -279,12 +279,12 @@ void main() {
       // outer.inner = inner
       // inner.value = x  -- inner is mutable, so outer is also mutable
       engine.loadFacts([
-        Fact('Assign', [0, 100]),
-        Fact('Alloc', [100, 'Outer#0']),
-        Fact('Assign', [1, 101]),
-        Fact('Alloc', [101, 'Inner#0']),
-        Fact('StoreField', [0, 'inner', 1]), // outer.inner = inner
-        Fact('StoreField', [1, 'value', 2]), // inner.value = x
+        const Fact('Assign', [0, 100]),
+        const Fact('Alloc', [100, 'Outer#0']),
+        const Fact('Assign', [1, 101]),
+        const Fact('Alloc', [101, 'Inner#0']),
+        const Fact('StoreField', [0, 'inner', 1]), // outer.inner = inner
+        const Fact('StoreField', [1, 'value', 2]), // inner.value = x
       ]);
 
       engine.run();
@@ -296,10 +296,10 @@ void main() {
 
     test('computes reachability', () {
       engine.loadFacts([
-        Fact('Reachable', [0]), // Entry is reachable
-        Fact('Flow', [0, 1]),
-        Fact('Flow', [1, 2]),
-        Fact('Flow', [0, 3]),
+        const Fact('Reachable', [0]), // Entry is reachable
+        const Fact('Flow', [0, 1]),
+        const Fact('Flow', [1, 2]),
+        const Fact('Flow', [0, 3]),
         // Block 4 is not connected
       ]);
 
@@ -315,10 +315,10 @@ void main() {
 
     test('builds call graph', () {
       engine.loadFacts([
-        Fact('Assign', [0, 100]),
-        Fact('Alloc', [100, 'Obj#0']),
-        Fact('Call', [0, 0, 'doSomething', 1]), // obj.doSomething()
-        Fact('Call', [1, -1, 'print', 2]), // print() - static call
+        const Fact('Assign', [0, 100]),
+        const Fact('Alloc', [100, 'Obj#0']),
+        const Fact('Call', [0, 0, 'doSomething', 1]), // obj.doSomething()
+        const Fact('Call', [1, -1, 'print', 2]), // print() - static call
       ]);
 
       engine.run();
@@ -337,11 +337,11 @@ void main() {
 
       // Load facts that would produce derivations
       limitedEngine.loadFacts([
-        Fact('Assign', [0, 100]),
-        Fact('Alloc', [100, 'Obj#0']),
-        Fact('Assign', [1, 0]),
-        Fact('Assign', [2, 1]),
-        Fact('Assign', [3, 2]),
+        const Fact('Assign', [0, 100]),
+        const Fact('Alloc', [100, 'Obj#0']),
+        const Fact('Assign', [1, 0]),
+        const Fact('Assign', [2, 1]),
+        const Fact('Assign', [3, 2]),
       ]);
 
       limitedEngine.run();
@@ -352,8 +352,8 @@ void main() {
 
     test('tracks totalIterations correctly', () {
       engine.loadFacts([
-        Fact('Assign', [0, 100]),
-        Fact('Alloc', [100, 'Obj#0']),
+        const Fact('Assign', [0, 100]),
+        const Fact('Alloc', [100, 'Obj#0']),
       ]);
 
       engine.run();
@@ -365,8 +365,8 @@ void main() {
 
     test('reachedMaxIterations is false for normal completion', () {
       engine.loadFacts([
-        Fact('Reachable', [0]),
-        Fact('Flow', [0, 1]),
+        const Fact('Reachable', [0]),
+        const Fact('Flow', [0, 1]),
       ]);
 
       engine.run();
@@ -381,13 +381,13 @@ void main() {
       final block = BasicBlock(id: 0);
       block.addInstruction(AssignInstruction(
         offset: 100,
-        target: Variable('x'),
-        value: NewObjectValue(typeName: 'MyClass', arguments: []),
+        target: const Variable('x'),
+        value: const NewObjectValue(typeName: 'MyClass', arguments: []),
       ));
       block.addInstruction(AssignInstruction(
         offset: 101,
-        target: Variable('y'),
-        value: VariableValue(Variable('x')),
+        target: const Variable('y'),
+        value: const VariableValue(Variable('x')),
       ));
 
       final cfg = ControlFlowGraph(
@@ -411,25 +411,25 @@ void main() {
       final block = BasicBlock(id: 0);
       block.addInstruction(AssignInstruction(
         offset: 100,
-        target: Variable('immutable'),
-        value: NewObjectValue(typeName: 'ImmutableData', arguments: []),
+        target: const Variable('immutable'),
+        value: const NewObjectValue(typeName: 'ImmutableData', arguments: []),
       ));
       block.addInstruction(AssignInstruction(
         offset: 101,
-        target: Variable('mutable'),
-        value: NewObjectValue(typeName: 'MutableData', arguments: []),
+        target: const Variable('mutable'),
+        value: const NewObjectValue(typeName: 'MutableData', arguments: []),
       ));
       // Create a variable to store to the field
       block.addInstruction(AssignInstruction(
         offset: 102,
-        target: Variable('someValue'),
-        value: NewObjectValue(typeName: 'SomeValue', arguments: []),
+        target: const Variable('someValue'),
+        value: const NewObjectValue(typeName: 'SomeValue', arguments: []),
       ));
       block.addInstruction(StoreFieldInstruction(
         offset: 103,
-        base: VariableValue(Variable('mutable')),
+        base: const VariableValue(Variable('mutable')),
         fieldName: 'value',
-        value: VariableValue(Variable('someValue')),
+        value: const VariableValue(Variable('someValue')),
       ));
 
       final cfg = ControlFlowGraph(
@@ -483,17 +483,17 @@ void main() {
       // outer → inner → leaf
       // Only leaf is mutated, so inner and outer are transitively mutable
       engine.loadFacts([
-        Fact('Assign', [0, 100]), // outer = alloc_100
-        Fact('Alloc', [100, 'Outer#0']),
-        Fact('Assign', [1, 101]), // inner = alloc_101
-        Fact('Alloc', [101, 'Inner#0']),
-        Fact('Assign', [2, 102]), // leaf = alloc_102
-        Fact('Alloc', [102, 'Leaf#0']),
-        Fact('Assign', [3, 103]), // immutable = alloc_103
-        Fact('Alloc', [103, 'Immutable#0']),
-        Fact('StoreField', [0, 'inner', 1]), // outer.inner = inner
-        Fact('StoreField', [1, 'leaf', 2]), // inner.leaf = leaf
-        Fact('StoreField', [2, 'value', 4]), // leaf.value = x (mutation)
+        const Fact('Assign', [0, 100]), // outer = alloc_100
+        const Fact('Alloc', [100, 'Outer#0']),
+        const Fact('Assign', [1, 101]), // inner = alloc_101
+        const Fact('Alloc', [101, 'Inner#0']),
+        const Fact('Assign', [2, 102]), // leaf = alloc_102
+        const Fact('Alloc', [102, 'Leaf#0']),
+        const Fact('Assign', [3, 103]), // immutable = alloc_103
+        const Fact('Alloc', [103, 'Immutable#0']),
+        const Fact('StoreField', [0, 'inner', 1]), // outer.inner = inner
+        const Fact('StoreField', [1, 'leaf', 2]), // inner.leaf = leaf
+        const Fact('StoreField', [2, 'value', 4]), // leaf.value = x (mutation)
       ]);
 
       engine.run();
@@ -526,10 +526,10 @@ void main() {
       // y = x
       // sink(y)  -- should detect violation
       engine.loadFacts([
-        Fact('TaintSource', [0, 'user_input']), // var 0 is tainted
-        Fact('Assign', [1, 0]), // x = source
-        Fact('Assign', [2, 1]), // y = x
-        Fact('TaintSink', [2, 'sql_query']), // y used in SQL
+        const Fact('TaintSource', [0, 'user_input']), // var 0 is tainted
+        const Fact('Assign', [1, 0]), // x = source
+        const Fact('Assign', [2, 1]), // y = x
+        const Fact('TaintSink', [2, 'sql_query']), // y used in SQL
       ]);
 
       engine.run();
@@ -556,9 +556,9 @@ void main() {
       // x = cleanData (not tainted)
       // sink(x)  -- no violation
       engine.loadFacts([
-        Fact('TaintSource', [0, 'user_input']),
-        Fact('Assign', [2, 1]), // x = cleanData (1 is not tainted)
-        Fact('TaintSink', [2, 'sql_query']),
+        const Fact('TaintSource', [0, 'user_input']),
+        const Fact('Assign', [2, 1]), // x = cleanData (1 is not tainted)
+        const Fact('TaintSink', [2, 'sql_query']),
       ]);
 
       engine.run();
@@ -576,12 +576,12 @@ void main() {
       // result = obj.field
       // sink(result)  -- should detect violation
       engine.loadFacts([
-        Fact('Assign', [0, 100]), // obj = alloc_100
-        Fact('Alloc', [100, 'Object#0']),
-        Fact('TaintSource', [1, 'user_input']), // var 1 is tainted
-        Fact('StoreField', [0, 'field', 1]), // obj.field = tainted
-        Fact('LoadField', [0, 'field', 2]), // result = obj.field
-        Fact('TaintSink', [2, 'exec']),
+        const Fact('Assign', [0, 100]), // obj = alloc_100
+        const Fact('Alloc', [100, 'Object#0']),
+        const Fact('TaintSource', [1, 'user_input']), // var 1 is tainted
+        const Fact('StoreField', [0, 'field', 1]), // obj.field = tainted
+        const Fact('LoadField', [0, 'field', 2]), // result = obj.field
+        const Fact('TaintSink', [2, 'exec']),
       ]);
 
       engine.run();
@@ -603,12 +603,12 @@ void main() {
       // x = source1
       // y = source2
       engine.loadFacts([
-        Fact('TaintSource', [0, 'user_input']),
-        Fact('TaintSource', [1, 'network']),
-        Fact('Assign', [2, 0]),
-        Fact('Assign', [3, 1]),
-        Fact('TaintSink', [2, 'file_write']),
-        Fact('TaintSink', [3, 'file_write']),
+        const Fact('TaintSource', [0, 'user_input']),
+        const Fact('TaintSource', [1, 'network']),
+        const Fact('Assign', [2, 0]),
+        const Fact('Assign', [3, 1]),
+        const Fact('TaintSink', [2, 'file_write']),
+        const Fact('TaintSink', [3, 'file_write']),
       ]);
 
       engine.run();
@@ -647,24 +647,24 @@ void main() {
 
       entry.addInstruction(AssignInstruction(
         offset: 0,
-        target: Variable('x'),
-        value: ConstantValue(1),
+        target: const Variable('x'),
+        value: const ConstantValue(1),
       ));
       thenBlock.addInstruction(AssignInstruction(
         offset: 1,
-        target: Variable('x'),
-        value: ConstantValue(2),
+        target: const Variable('x'),
+        value: const ConstantValue(2),
       ));
       elseBlock.addInstruction(AssignInstruction(
         offset: 2,
-        target: Variable('x'),
-        value: ConstantValue(3),
+        target: const Variable('x'),
+        value: const ConstantValue(3),
       ));
       // Add a use of x in merge block to trigger phi creation
       merge.addInstruction(AssignInstruction(
         offset: 3,
-        target: Variable('z'),
-        value: VariableValue(Variable('x')),
+        target: const Variable('z'),
+        value: const VariableValue(Variable('x')),
       ));
 
       final cfg = ControlFlowGraph(
@@ -699,18 +699,18 @@ void main() {
       final block = BasicBlock(id: 0);
       block.addInstruction(AssignInstruction(
         offset: 0,
-        target: Variable('x'),
-        value: ConstantValue(1),
+        target: const Variable('x'),
+        value: const ConstantValue(1),
       ));
       block.addInstruction(AssignInstruction(
         offset: 1,
-        target: Variable('x'),
-        value: ConstantValue(2),
+        target: const Variable('x'),
+        value: const ConstantValue(2),
       ));
       block.addInstruction(AssignInstruction(
         offset: 2,
-        target: Variable('y'),
-        value: VariableValue(Variable('x')),
+        target: const Variable('y'),
+        value: const VariableValue(Variable('x')),
       ));
 
       final cfg = ControlFlowGraph(
@@ -758,23 +758,23 @@ void main() {
 
       entry.addInstruction(AssignInstruction(
         offset: 100,
-        target: Variable('obj'),
-        value: NewObjectValue(typeName: 'Foo', arguments: []),
+        target: const Variable('obj'),
+        value: const NewObjectValue(typeName: 'Foo', arguments: []),
       ));
       thenBlock.addInstruction(AssignInstruction(
         offset: 1,
-        target: Variable('x'),
-        value: VariableValue(Variable('obj')),
+        target: const Variable('x'),
+        value: const VariableValue(Variable('obj')),
       ));
       elseBlock.addInstruction(AssignInstruction(
         offset: 2,
-        target: Variable('x'),
-        value: VariableValue(Variable('obj')),
+        target: const Variable('x'),
+        value: const VariableValue(Variable('obj')),
       ));
       merge.addInstruction(AssignInstruction(
         offset: 3,
-        target: Variable('result'),
-        value: VariableValue(Variable('x')),
+        target: const Variable('result'),
+        value: const VariableValue(Variable('x')),
       ));
 
       final cfg = ControlFlowGraph(

@@ -1,6 +1,5 @@
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:anteater/anteater.dart';
-import 'package:anteater/metrics/metrics_aggregator.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -13,7 +12,7 @@ void main() {
 
     group('Cyclomatic Complexity', () {
       test('simple function has complexity 1', () {
-        final code = '''
+        const code = '''
 void simple() {
   print('hello');
 }
@@ -27,7 +26,7 @@ void simple() {
       });
 
       test('if statement adds 1', () {
-        final code = '''
+        const code = '''
 void withIf(bool x) {
   if (x) {
     print('yes');
@@ -43,7 +42,7 @@ void withIf(bool x) {
       });
 
       test('logical operators add complexity', () {
-        final code = '''
+        const code = '''
 void withLogical(bool a, bool b, bool c) {
   if (a && b || c) {
     print('complex');
@@ -60,7 +59,7 @@ void withLogical(bool a, bool b, bool c) {
       });
 
       test('null-aware operators add complexity', () {
-        final code = '''
+        const code = '''
 void withNullAware(String? x) {
   final len = x?.length ?? 0;
   print(len);
@@ -78,7 +77,7 @@ void withNullAware(String? x) {
 
     group('Cognitive Complexity', () {
       test('nested if increases complexity exponentially', () {
-        final code = '''
+        const code = '''
 void nested(bool a, bool b) {
   if (a) {
     if (b) {
@@ -101,7 +100,7 @@ void nested(bool a, bool b) {
 
     group('Halstead Metrics', () {
       test('calculates volume for simple expression', () {
-        final code = '''
+        const code = '''
 int add(int a, int b) {
   return a + b;
 }
@@ -131,7 +130,7 @@ int add(int a, int b) {
       });
 
       test('counts files after adding', () {
-        final code = '''
+        const code = '''
 void simple() {
   print('hello');
 }
@@ -144,7 +143,7 @@ void simple() {
       });
 
       test('counts multiple functions in one file', () {
-        final code = '''
+        const code = '''
 void func1() {
   print('one');
 }
@@ -165,7 +164,7 @@ void func3() {
       });
 
       test('counts class methods', () {
-        final code = '''
+        const code = '''
 class MyClass {
   void method1() {
     print('one');
@@ -184,7 +183,7 @@ class MyClass {
       });
 
       test('removes file correctly', () {
-        final code = '''
+        const code = '''
 void func1() { print('one'); }
 void func2() { print('two'); }
 ''';
@@ -200,8 +199,8 @@ void func2() { print('two'); }
       });
 
       test('clears all data', () {
-        final code1 = 'void func1() { print("one"); }';
-        final code2 = 'void func2() { print("two"); }';
+        const code1 = 'void func1() { print("one"); }';
+        const code2 = 'void func2() { print("two"); }';
         final result1 = parseString(content: code1);
         final result2 = parseString(content: code2);
 
@@ -227,7 +226,7 @@ void func2() { print('two'); }
       });
 
       test('calculates project-wide statistics', () {
-        final code = '''
+        const code = '''
 void simple1() {
   print('hello');
 }
@@ -257,11 +256,11 @@ void complex(bool a, bool b) {
       });
 
       test('calculates statistics across multiple files', () {
-        final code1 = '''
+        const code1 = '''
 void func1() { print('one'); }
 void func2() { print('two'); }
 ''';
-        final code2 = '''
+        const code2 = '''
 void func3() { print('three'); }
 ''';
         final result1 = parseString(content: code1);
@@ -280,7 +279,7 @@ void func3() { print('three'); }
     group('Violation Detection', () {
       test('detects complexity violations', () {
         // Create a function with high complexity
-        final code = '''
+        const code = '''
 void highComplexity(int x) {
   if (x > 0) {
     if (x > 10) {
@@ -346,7 +345,7 @@ void highComplexity(int x) {
           ),
         );
 
-        final code = '''
+        const code = '''
 void slightlyComplex(bool a, bool b) {
   if (a && b) {
     print('yes');
@@ -367,7 +366,7 @@ void slightlyComplex(bool a, bool b) {
 
     group('Ranking Functions', () {
       test('returns worst functions sorted by MI', () {
-        final code = '''
+        const code = '''
 void simple() {
   print('hello');
 }
@@ -398,7 +397,7 @@ void complex(int x) {
       });
 
       test('returns most complex functions sorted by cyclomatic', () {
-        final code = '''
+        const code = '''
 void simple() {
   print('hello');
 }
@@ -432,7 +431,7 @@ void complex(int x) {
 
     group('Rating Distribution', () {
       test('calculates rating distribution', () {
-        final code = '''
+        const code = '''
 void simple1() { print('one'); }
 void simple2() { print('two'); }
 void simple3() { print('three'); }
@@ -448,7 +447,7 @@ void simple3() { print('three'); }
       });
 
       test('calculates percentages correctly', () {
-        final code = '''
+        const code = '''
 void simple() { print('hello'); }
 ''';
         final result = parseString(content: code);
@@ -467,10 +466,10 @@ void simple() { print('hello'); }
 
     group('File Summary', () {
       test('returns files sorted by maintainability', () {
-        final simpleCode = '''
+        const simpleCode = '''
 void simple() { print('hello'); }
 ''';
-        final complexCode = '''
+        const complexCode = '''
 void complex(int x) {
   if (x > 0) {
     if (x > 10) {
@@ -500,7 +499,7 @@ void complex(int x) {
 
     group('Report Generation', () {
       test('generates comprehensive report', () {
-        final code = '''
+        const code = '''
 void simple() { print('hello'); }
 
 void complex(int x) {
@@ -530,7 +529,7 @@ void complex(int x) {
       });
 
       test('hasViolations reflects violation state', () {
-        final code = '''
+        const code = '''
 void simple() { print('hello'); }
 ''';
         final result = parseString(content: code);
@@ -543,7 +542,7 @@ void simple() { print('hello'); }
       });
 
       test('report toString is formatted', () {
-        final code = '''
+        const code = '''
 void func() { print('test'); }
 ''';
         final result = parseString(content: code);
@@ -559,7 +558,7 @@ void func() { print('test'); }
 
     group('MetricStats', () {
       test('calculates min, max, mean correctly', () {
-        final code = '''
+        const code = '''
 void small() { print('s'); }
 
 void medium() {

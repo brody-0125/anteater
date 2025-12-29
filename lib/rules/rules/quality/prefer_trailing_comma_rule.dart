@@ -32,10 +32,10 @@ class PreferTrailingCommaRule extends StyleRule {
 }
 
 class _PreferTrailingCommaVisitor extends RecursiveAstVisitor<void> {
+  _PreferTrailingCommaVisitor(this.lineInfo);
+
   final LineInfo lineInfo;
   final List<Violation> violations = [];
-
-  _PreferTrailingCommaVisitor(this.lineInfo);
 
   @override
   void visitArgumentList(ArgumentList node) {

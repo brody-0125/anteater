@@ -59,10 +59,10 @@ class PreferFirstLastRule extends StyleRule {
 }
 
 class _PreferFirstLastVisitor extends RecursiveAstVisitor<void> {
+  _PreferFirstLastVisitor(this.lineInfo);
+
   final LineInfo lineInfo;
   final List<Violation> violations = [];
-
-  _PreferFirstLastVisitor(this.lineInfo);
 
   @override
   void visitIndexExpression(IndexExpression node) {

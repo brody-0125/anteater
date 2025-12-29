@@ -32,10 +32,10 @@ class AvoidGlobalStateRule extends StyleRule {
 }
 
 class _AvoidGlobalStateVisitor extends RecursiveAstVisitor<void> {
+  _AvoidGlobalStateVisitor(this.lineInfo);
+
   final LineInfo lineInfo;
   final List<Violation> violations = [];
-
-  _AvoidGlobalStateVisitor(this.lineInfo);
 
   @override
   void visitTopLevelVariableDeclaration(TopLevelVariableDeclaration node) {

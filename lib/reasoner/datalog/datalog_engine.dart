@@ -22,9 +22,6 @@ abstract class DatalogEngine {
 
 /// A Datalog fact (tuple in a relation).
 class Fact {
-  final String relation;
-  final List<Object> values;
-
   /// Creates a Fact with the given values.
   ///
   /// Note: For immutability guarantees, use [Fact.immutable] which
@@ -38,6 +35,9 @@ class Fact {
   factory Fact.immutable(String relation, List<Object> values) =>
       Fact(relation, List.unmodifiable(values));
 
+  final String relation;
+  final List<Object> values;
+
   @override
   String toString() => '$relation(${values.join(', ')})';
 }
@@ -46,6 +46,8 @@ class Fact {
 ///
 /// Requires pre-compiled Soufflé program as shared library.
 class SouffleEngine implements DatalogEngine {
+  SouffleEngine(this.libraryPath);
+
   final String libraryPath;
   late final DynamicLibrary _lib;
   bool _initialized = false;
@@ -58,8 +60,6 @@ class SouffleEngine implements DatalogEngine {
   late final void Function(Pointer<Utf8>, Pointer<Utf8>) _loadFact;
   // ignore: unused_field - placeholder for future FFI implementation
   late final Pointer<Utf8> Function(Pointer<Utf8>) _queryRelation;
-
-  SouffleEngine(this.libraryPath);
 
   /// Initializes the Soufflé engine.
   void initialize() {
@@ -117,6 +117,12 @@ class SouffleEngine implements DatalogEngine {
 
 /// In-memory Datalog engine for testing and small programs.
 class InMemoryDatalogEngine implements DatalogEngine {
+  /// Creates an in-memory Datalog engine.
+  ///
+  /// [maxIterations] sets the limit before forced termination.
+  /// Default is 100000 which is sufficient for most programs.
+  InMemoryDatalogEngine({this.maxIterations = 100000});
+
   final Map<String, List<List<Object>>> _facts = {};
   final Map<String, List<List<Object>>> _derived = {};
   final List<DatalogRule> _rules = [];
@@ -133,12 +139,6 @@ class InMemoryDatalogEngine implements DatalogEngine {
 
   /// Total iterations performed during the last run().
   int _totalIterations = 0;
-
-  /// Creates an in-memory Datalog engine.
-  ///
-  /// [maxIterations] sets the limit before forced termination.
-  /// Default is 100000 which is sufficient for most programs.
-  InMemoryDatalogEngine({this.maxIterations = 100000});
 
   /// Whether the last run() reached the iteration limit.
   bool get reachedMaxIterations => _reachedMaxIterations;
@@ -234,6 +234,8 @@ class InMemoryDatalogEngine implements DatalogEngine {
 /// the predicates they negate. For example, if rule R uses `!P`,
 /// then R must be in a stratum > stratum of rules producing P.
 abstract class DatalogRule {
+  DatalogRule(this.headRelation, {this.stratum = 0});
+
   final String headRelation;
 
   /// Stratum for stratified evaluation.
@@ -241,8 +243,6 @@ abstract class DatalogRule {
   /// Rules in stratum N are evaluated to fixpoint before rules in stratum N+1.
   /// Rules with negation should have higher stratum than their negated dependencies.
   final int stratum;
-
-  DatalogRule(this.headRelation, {this.stratum = 0});
 
   /// Evaluates the rule and returns derived facts.
   List<Fact> evaluate(

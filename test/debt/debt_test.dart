@@ -428,7 +428,7 @@ void main() {}
 
   group('DebtTrend', () {
     test('calculates cost change', () {
-      final trend = DebtTrend(
+      const trend = DebtTrend(
         previousTotal: 100.0,
         currentTotal: 120.0,
         previousItemCount: 10,
@@ -444,7 +444,7 @@ void main() {}
     });
 
     test('detects decreasing trend', () {
-      final trend = DebtTrend(
+      const trend = DebtTrend(
         previousTotal: 100.0,
         currentTotal: 80.0,
         previousItemCount: 10,
@@ -458,7 +458,7 @@ void main() {}
     });
 
     test('detects stable trend', () {
-      final trend = DebtTrend(
+      const trend = DebtTrend(
         previousTotal: 100.0,
         currentTotal: 100.0,
         previousItemCount: 10,

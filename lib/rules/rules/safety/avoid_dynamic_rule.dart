@@ -77,10 +77,10 @@ class AvoidDynamicRule extends StyleRule {
 }
 
 class _AvoidDynamicVisitor extends RecursiveAstVisitor<void> {
+  _AvoidDynamicVisitor(this.lineInfo);
+
   final LineInfo lineInfo;
   final List<Violation> violations = [];
-
-  _AvoidDynamicVisitor(this.lineInfo);
 
   @override
   void visitNamedType(NamedType node) {

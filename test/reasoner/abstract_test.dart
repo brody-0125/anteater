@@ -14,8 +14,8 @@ void main() {
     });
 
     test('join computes least upper bound', () {
-      final a = IntervalDomain(0, 5);
-      final b = IntervalDomain(3, 10);
+      const a = IntervalDomain(0, 5);
+      const b = IntervalDomain(3, 10);
       final result = a.join(b);
 
       expect(result.min, equals(0));
@@ -23,8 +23,8 @@ void main() {
     });
 
     test('meet computes greatest lower bound', () {
-      final a = IntervalDomain(0, 5);
-      final b = IntervalDomain(3, 10);
+      const a = IntervalDomain(0, 5);
+      const b = IntervalDomain(3, 10);
       final result = a.meet(b);
 
       expect(result.min, equals(3));
@@ -32,16 +32,16 @@ void main() {
     });
 
     test('meet of disjoint intervals is bottom', () {
-      final a = IntervalDomain(0, 5);
-      final b = IntervalDomain(10, 15);
+      const a = IntervalDomain(0, 5);
+      const b = IntervalDomain(10, 15);
       final result = a.meet(b);
 
       expect(result.isBottom, isTrue);
     });
 
     test('widening jumps to infinity on growth', () {
-      final a = IntervalDomain(0, 5);
-      final b = IntervalDomain(0, 10);
+      const a = IntervalDomain(0, 5);
+      const b = IntervalDomain(0, 10);
       final result = a.widen(b);
 
       expect(result.min, equals(0));
@@ -49,8 +49,8 @@ void main() {
     });
 
     test('narrowing restores finite bound', () {
-      final a = IntervalDomain(0, null); // [0, +∞)
-      final b = IntervalDomain(0, 100);
+      const a = IntervalDomain(0, null); // [0, +∞)
+      const b = IntervalDomain(0, 100);
       final result = a.narrow(b);
 
       expect(result.min, equals(0));
@@ -58,8 +58,8 @@ void main() {
     });
 
     test('add computes interval sum', () {
-      final a = IntervalDomain(1, 5);
-      final b = IntervalDomain(10, 20);
+      const a = IntervalDomain(1, 5);
+      const b = IntervalDomain(10, 20);
       final result = a.add(b);
 
       expect(result.min, equals(11));
@@ -67,8 +67,8 @@ void main() {
     });
 
     test('subtract computes interval difference', () {
-      final a = IntervalDomain(10, 20);
-      final b = IntervalDomain(1, 5);
+      const a = IntervalDomain(10, 20);
+      const b = IntervalDomain(1, 5);
       final result = a.subtract(b);
 
       expect(result.min, equals(5)); // 10 - 5
@@ -76,9 +76,9 @@ void main() {
     });
 
     test('isValidArrayIndex validates bounds', () {
-      final valid = IntervalDomain(0, 4);
-      final invalid = IntervalDomain(-1, 10);
-      final outOfBounds = IntervalDomain(5, 10);
+      const valid = IntervalDomain(0, 4);
+      const invalid = IntervalDomain(-1, 10);
+      const outOfBounds = IntervalDomain(5, 10);
 
       expect(valid.isValidArrayIndex(5), isTrue);
       expect(invalid.isValidArrayIndex(5), isFalse);
@@ -86,8 +86,8 @@ void main() {
     });
 
     test('divide computes interval quotient', () {
-      final a = IntervalDomain(10, 20);
-      final b = IntervalDomain(2, 5);
+      const a = IntervalDomain(10, 20);
+      const b = IntervalDomain(2, 5);
       final result = a.divide(b);
 
       // [10,20] / [2,5] = [10/5, 20/2] = [2, 10]
@@ -96,8 +96,8 @@ void main() {
     });
 
     test('divide by zero interval returns top', () {
-      final a = IntervalDomain(10, 20);
-      final zeroContaining = IntervalDomain(-1, 1);
+      const a = IntervalDomain(10, 20);
+      const zeroContaining = IntervalDomain(-1, 1);
       final result = a.divide(zeroContaining);
 
       expect(result.isTop, isTrue);
@@ -113,8 +113,8 @@ void main() {
     });
 
     test('modulo computes interval modulo', () {
-      final a = IntervalDomain(10, 20);
-      final b = IntervalDomain(3, 3);
+      const a = IntervalDomain(10, 20);
+      const b = IntervalDomain(3, 3);
       final result = a.modulo(b);
 
       // % 3 results in [0, 2]
@@ -123,15 +123,15 @@ void main() {
     });
 
     test('modulo by zero interval returns top', () {
-      final a = IntervalDomain(10, 20);
-      final zeroContaining = IntervalDomain(-1, 1);
+      const a = IntervalDomain(10, 20);
+      const zeroContaining = IntervalDomain(-1, 1);
       final result = a.modulo(zeroContaining);
 
       expect(result.isTop, isTrue);
     });
 
     test('containsValue checks interval membership', () {
-      final interval = IntervalDomain(5, 10);
+      const interval = IntervalDomain(5, 10);
 
       expect(interval.containsValue(5), isTrue);
       expect(interval.containsValue(7), isTrue);
@@ -141,9 +141,9 @@ void main() {
     });
 
     test('containsValue handles infinite bounds', () {
-      final unboundedAbove = IntervalDomain(0, null);
-      final unboundedBelow = IntervalDomain(null, 10);
-      final topValue = IntervalDomain.topValue;
+      const unboundedAbove = IntervalDomain(0, null);
+      const unboundedBelow = IntervalDomain(null, 10);
+      const topValue = IntervalDomain.topValue;
 
       expect(unboundedAbove.containsValue(1000000), isTrue);
       expect(unboundedAbove.containsValue(-1), isFalse);
@@ -155,30 +155,30 @@ void main() {
 
   group('NullabilityDomain', () {
     test('join of different non-bottom states is top', () {
-      final a = NullabilityDomain.nullValue;
-      final b = NullabilityDomain.nonNullValue;
+      const a = NullabilityDomain.nullValue;
+      const b = NullabilityDomain.nonNullValue;
       final result = a.join(b);
 
       expect(result.isTop, isTrue);
     });
 
     test('meet of null and nonNull is bottom', () {
-      final a = NullabilityDomain.nullValue;
-      final b = NullabilityDomain.nonNullValue;
+      const a = NullabilityDomain.nullValue;
+      const b = NullabilityDomain.nonNullValue;
       final result = a.meet(b);
 
       expect(result.isBottom, isTrue);
     });
 
     test('applyNonNullConstraint on maybeNull gives nonNull', () {
-      final maybeNull = NullabilityDomain.topValue;
+      const maybeNull = NullabilityDomain.topValue;
       final result = maybeNull.applyNonNullConstraint();
 
       expect(result.isDefinitelyNonNull, isTrue);
     });
 
     test('applyNonNullConstraint on definitelyNull gives bottom', () {
-      final definitelyNull = NullabilityDomain.nullValue;
+      const definitelyNull = NullabilityDomain.nullValue;
       final result = definitelyNull.applyNonNullConstraint();
 
       expect(result.isBottom, isTrue);
@@ -188,12 +188,12 @@ void main() {
   group('AbstractState', () {
     test('join combines variable states', () {
       final a = AbstractState<IntervalDomain>(IntervalDomain.topValue);
-      a['x'] = IntervalDomain(0, 10);
-      a['y'] = IntervalDomain(5, 15);
+      a['x'] = const IntervalDomain(0, 10);
+      a['y'] = const IntervalDomain(5, 15);
 
       final b = AbstractState<IntervalDomain>(IntervalDomain.topValue);
-      b['x'] = IntervalDomain(5, 20);
-      b['z'] = IntervalDomain(0, 5);
+      b['x'] = const IntervalDomain(5, 20);
+      b['z'] = const IntervalDomain(0, 5);
 
       final result = a.join(b);
 
@@ -213,12 +213,12 @@ void main() {
 
     test('join combines overlapping variables', () {
       final a = AbstractState<IntervalDomain>(IntervalDomain.topValue);
-      a['x'] = IntervalDomain(0, 10);
-      a['y'] = IntervalDomain(5, 15);
+      a['x'] = const IntervalDomain(0, 10);
+      a['y'] = const IntervalDomain(5, 15);
 
       final b = AbstractState<IntervalDomain>(IntervalDomain.topValue);
-      b['x'] = IntervalDomain(5, 20);
-      b['y'] = IntervalDomain(10, 25);
+      b['x'] = const IntervalDomain(5, 20);
+      b['y'] = const IntervalDomain(10, 25);
 
       final result = a.join(b);
 
@@ -237,8 +237,8 @@ void main() {
       final block = BasicBlock(id: 0);
       block.addInstruction(AssignInstruction(
         offset: 0,
-        target: Variable('x'),
-        value: ConstantValue(5),
+        target: const Variable('x'),
+        value: const ConstantValue(5),
       ));
 
       final cfg = ControlFlowGraph(
@@ -259,18 +259,18 @@ void main() {
       final block = BasicBlock(id: 0);
       block.addInstruction(AssignInstruction(
         offset: 0,
-        target: Variable('x'),
-        value: ConstantValue(5),
+        target: const Variable('x'),
+        value: const ConstantValue(5),
       ));
       block.addInstruction(AssignInstruction(
         offset: 1,
-        target: Variable('y'),
-        value: ConstantValue(3),
+        target: const Variable('y'),
+        value: const ConstantValue(3),
       ));
       block.addInstruction(AssignInstruction(
         offset: 2,
-        target: Variable('z'),
-        value: BinaryOpValue(
+        target: const Variable('z'),
+        value: const BinaryOpValue(
           '+',
           VariableValue(Variable('x')),
           VariableValue(Variable('y')),
@@ -295,18 +295,18 @@ void main() {
       final block = BasicBlock(id: 0);
       block.addInstruction(AssignInstruction(
         offset: 0,
-        target: Variable('x'),
-        value: ConstantValue(20),
+        target: const Variable('x'),
+        value: const ConstantValue(20),
       ));
       block.addInstruction(AssignInstruction(
         offset: 1,
-        target: Variable('y'),
-        value: ConstantValue(4),
+        target: const Variable('y'),
+        value: const ConstantValue(4),
       ));
       block.addInstruction(AssignInstruction(
         offset: 2,
-        target: Variable('div'),
-        value: BinaryOpValue(
+        target: const Variable('div'),
+        value: const BinaryOpValue(
           '~/',
           VariableValue(Variable('x')),
           VariableValue(Variable('y')),
@@ -314,8 +314,8 @@ void main() {
       ));
       block.addInstruction(AssignInstruction(
         offset: 3,
-        target: Variable('mod'),
-        value: BinaryOpValue(
+        target: const Variable('mod'),
+        value: const BinaryOpValue(
           '%',
           VariableValue(Variable('x')),
           VariableValue(Variable('y')),
@@ -357,14 +357,14 @@ void main() {
 
       thenBlock.addInstruction(AssignInstruction(
         offset: 0,
-        target: Variable('x'),
-        value: ConstantValue(5),
+        target: const Variable('x'),
+        value: const ConstantValue(5),
       ));
 
       elseBlock.addInstruction(AssignInstruction(
         offset: 1,
-        target: Variable('x'),
-        value: ConstantValue(10),
+        target: const Variable('x'),
+        value: const ConstantValue(10),
       ));
 
       final cfg = ControlFlowGraph(
@@ -403,14 +403,14 @@ void main() {
 
       entry.addInstruction(AssignInstruction(
         offset: 0,
-        target: Variable('i'),
-        value: ConstantValue(0),
+        target: const Variable('i'),
+        value: const ConstantValue(0),
       ));
 
       body.addInstruction(AssignInstruction(
         offset: 1,
-        target: Variable('i'),
-        value: BinaryOpValue(
+        target: const Variable('i'),
+        value: const BinaryOpValue(
           '+',
           VariableValue(Variable('i')),
           ConstantValue(1),
@@ -447,14 +447,14 @@ void main() {
       final block = BasicBlock(id: 0);
       block.addInstruction(AssignInstruction(
         offset: 0,
-        target: Variable('i'),
-        value: ConstantValue(2),
+        target: const Variable('i'),
+        value: const ConstantValue(2),
       ));
       block.addInstruction(LoadIndexInstruction(
         offset: 1,
-        base: VariableValue(Variable('arr')),
-        index: VariableValue(Variable('i')),
-        result: Variable('elem'),
+        base: const VariableValue(Variable('arr')),
+        index: const VariableValue(Variable('i')),
+        result: const Variable('elem'),
       ));
 
       final cfg = ControlFlowGraph(
@@ -475,14 +475,14 @@ void main() {
       final block = BasicBlock(id: 0);
       block.addInstruction(AssignInstruction(
         offset: 0,
-        target: Variable('i'),
-        value: ConstantValue(-1),
+        target: const Variable('i'),
+        value: const ConstantValue(-1),
       ));
       block.addInstruction(LoadIndexInstruction(
         offset: 1,
-        base: VariableValue(Variable('arr')),
-        index: VariableValue(Variable('i')),
-        result: Variable('elem'),
+        base: const VariableValue(Variable('arr')),
+        index: const VariableValue(Variable('i')),
+        result: const Variable('elem'),
       ));
 
       final cfg = ControlFlowGraph(
@@ -503,14 +503,14 @@ void main() {
       final block = BasicBlock(id: 0);
       block.addInstruction(AssignInstruction(
         offset: 0,
-        target: Variable('i'),
-        value: ConstantValue(10),
+        target: const Variable('i'),
+        value: const ConstantValue(10),
       ));
       block.addInstruction(LoadIndexInstruction(
         offset: 1,
-        base: VariableValue(Variable('arr')),
-        index: VariableValue(Variable('i')),
-        result: Variable('elem'),
+        base: const VariableValue(Variable('arr')),
+        index: const VariableValue(Variable('i')),
+        result: const Variable('elem'),
       ));
 
       final cfg = ControlFlowGraph(
@@ -533,12 +533,12 @@ void main() {
       final block = BasicBlock(id: 0);
       block.addInstruction(AssignInstruction(
         offset: 0,
-        target: Variable('obj'),
-        value: NewObjectValue(typeName: 'MyClass', arguments: []),
+        target: const Variable('obj'),
+        value: const NewObjectValue(typeName: 'MyClass', arguments: []),
       ));
       block.addInstruction(CallInstruction(
         offset: 1,
-        receiver: VariableValue(Variable('obj')),
+        receiver: const VariableValue(Variable('obj')),
         methodName: 'doSomething',
         arguments: [],
       ));
@@ -560,12 +560,12 @@ void main() {
       final block = BasicBlock(id: 0);
       block.addInstruction(AssignInstruction(
         offset: 0,
-        target: Variable('obj'),
-        value: ConstantValue(null),
+        target: const Variable('obj'),
+        value: const ConstantValue(null),
       ));
       block.addInstruction(CallInstruction(
         offset: 1,
-        receiver: VariableValue(Variable('obj')),
+        receiver: const VariableValue(Variable('obj')),
         methodName: 'doSomething',
         arguments: [],
       ));
@@ -587,7 +587,7 @@ void main() {
       final block = BasicBlock(id: 0);
       block.addInstruction(CallInstruction(
         offset: 0,
-        receiver: VariableValue(Variable('unknownObj')),
+        receiver: const VariableValue(Variable('unknownObj')),
         methodName: 'doSomething',
         arguments: [],
       ));
@@ -609,12 +609,12 @@ void main() {
       final block = BasicBlock(id: 0);
       block.addInstruction(NullCheckInstruction(
         offset: 0,
-        operand: VariableValue(Variable('maybeNull')),
-        result: Variable('definitelyNonNull'),
+        operand: const VariableValue(Variable('maybeNull')),
+        result: const Variable('definitelyNonNull'),
       ));
       block.addInstruction(CallInstruction(
         offset: 1,
-        receiver: VariableValue(Variable('definitelyNonNull')),
+        receiver: const VariableValue(Variable('definitelyNonNull')),
         methodName: 'doSomething',
         arguments: [],
       ));
@@ -638,11 +638,11 @@ void main() {
 
   group('CombinedDomain', () {
     test('combines interval and nullability', () {
-      final a = CombinedDomain(
+      const a = CombinedDomain(
         IntervalDomain(0, 10),
         NullabilityDomain.nonNullValue,
       );
-      final b = CombinedDomain(
+      const b = CombinedDomain(
         IntervalDomain(5, 15),
         NullabilityDomain.nullValue,
       );
@@ -655,11 +655,11 @@ void main() {
     });
 
     test('meet produces refined bounds', () {
-      final a = CombinedDomain(
+      const a = CombinedDomain(
         IntervalDomain(0, 10),
         NullabilityDomain.topValue, // maybeNull
       );
-      final b = CombinedDomain(
+      const b = CombinedDomain(
         IntervalDomain(5, 15),
         NullabilityDomain.nonNullValue,
       );

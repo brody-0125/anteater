@@ -3,6 +3,12 @@ import 'debt_item.dart';
 
 /// Report containing technical debt analysis results.
 class DebtReport {
+  const DebtReport({
+    required this.summary,
+    required this.items,
+    required this.byFile,
+  });
+
   /// Overall summary of debt costs.
   final DebtSummary summary;
 
@@ -11,12 +17,6 @@ class DebtReport {
 
   /// Summary breakdown by file.
   final Map<String, FileDebtSummary> byFile;
-
-  const DebtReport({
-    required this.summary,
-    required this.items,
-    required this.byFile,
-  });
 
   /// Get hotspots (files with highest debt cost).
   List<FileDebtSummary> getHotspots(int n) {
@@ -189,6 +189,13 @@ class DebtReport {
 
 /// Summary of debt for a single file.
 class FileDebtSummary {
+  const FileDebtSummary({
+    required this.filePath,
+    required this.itemCount,
+    required this.totalCost,
+    required this.countByType,
+  });
+
   /// Path to the file.
   final String filePath;
 
@@ -200,13 +207,6 @@ class FileDebtSummary {
 
   /// Breakdown by type for this file.
   final Map<DebtType, int> countByType;
-
-  const FileDebtSummary({
-    required this.filePath,
-    required this.itemCount,
-    required this.totalCost,
-    required this.countByType,
-  });
 
   /// Convert to JSON map.
   Map<String, dynamic> toJson() => {

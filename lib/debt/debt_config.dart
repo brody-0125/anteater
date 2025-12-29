@@ -2,24 +2,6 @@ import 'debt_item.dart';
 
 /// Configuration for technical debt cost calculation.
 class DebtCostConfig {
-  /// Base cost for each debt type (in hours by default).
-  final Map<DebtType, double> costs;
-
-  /// Multipliers for each severity level.
-  final Map<DebtSeverity, double> multipliers;
-
-  /// Unit of measurement ('hours', 'days', 'story_points').
-  final String unit;
-
-  /// Alert threshold - report exceeds if total cost > threshold.
-  final double threshold;
-
-  /// Metrics thresholds.
-  final DebtMetricsThresholds metricsThresholds;
-
-  /// File patterns to exclude from debt analysis.
-  final List<String> exclude;
-
   const DebtCostConfig({
     required this.costs,
     required this.multipliers,
@@ -30,8 +12,8 @@ class DebtCostConfig {
   });
 
   /// Default configuration based on DCM reference values.
-  factory DebtCostConfig.defaults() => DebtCostConfig(
-        costs: const {
+  factory DebtCostConfig.defaults() => const DebtCostConfig(
+        costs: {
           DebtType.todo: 4.0,
           DebtType.fixme: 8.0,
           DebtType.ignoreComment: 8.0,
@@ -43,7 +25,7 @@ class DebtCostConfig {
           DebtType.longMethod: 4.0,
           DebtType.duplicateCode: 8.0,
         },
-        multipliers: const {
+        multipliers: {
           DebtSeverity.critical: 4.0,
           DebtSeverity.high: 2.0,
           DebtSeverity.medium: 1.0,
@@ -51,8 +33,8 @@ class DebtCostConfig {
         },
         unit: 'hours',
         threshold: 40.0,
-        metricsThresholds: const DebtMetricsThresholds(),
-        exclude: const [],
+        metricsThresholds: DebtMetricsThresholds(),
+        exclude: [],
       );
 
   /// Create configuration from YAML map.
@@ -102,6 +84,24 @@ class DebtCostConfig {
     );
   }
 
+  /// Base cost for each debt type (in hours by default).
+  final Map<DebtType, double> costs;
+
+  /// Multipliers for each severity level.
+  final Map<DebtSeverity, double> multipliers;
+
+  /// Unit of measurement ('hours', 'days', 'story_points').
+  final String unit;
+
+  /// Alert threshold - report exceeds if total cost > threshold.
+  final double threshold;
+
+  /// Metrics thresholds.
+  final DebtMetricsThresholds metricsThresholds;
+
+  /// File patterns to exclude from debt analysis.
+  final List<String> exclude;
+
   static DebtType? _parseDebtType(String key) {
     final normalized = key.replaceAll('-', '').toLowerCase();
     for (final type in DebtType.values) {
@@ -149,18 +149,6 @@ class DebtCostConfig {
 
 /// Thresholds for metrics-based debt detection.
 class DebtMetricsThresholds {
-  /// Maintainability index threshold (debt if MI < this).
-  final double maintainabilityIndex;
-
-  /// Cyclomatic complexity threshold (debt if > this).
-  final int cyclomaticComplexity;
-
-  /// Cognitive complexity threshold (debt if > this).
-  final int cognitiveComplexity;
-
-  /// Lines of code threshold (debt if > this).
-  final int linesOfCode;
-
   const DebtMetricsThresholds({
     this.maintainabilityIndex = 50.0,
     this.cyclomaticComplexity = 20,
@@ -172,12 +160,15 @@ class DebtMetricsThresholds {
       DebtMetricsThresholds(
         maintainabilityIndex:
             (yaml['maintainability-index'] as num?)?.toDouble() ?? 50.0,
-        cyclomaticComplexity:
-            yaml['cyclomatic-complexity'] as int? ?? 20,
-        cognitiveComplexity:
-            yaml['cognitive-complexity'] as int? ?? 15,
+        cyclomaticComplexity: yaml['cyclomatic-complexity'] as int? ?? 20,
+        cognitiveComplexity: yaml['cognitive-complexity'] as int? ?? 15,
         linesOfCode: yaml['lines-of-code'] as int? ?? 100,
       );
+
+  final double maintainabilityIndex;
+  final int cyclomaticComplexity;
+  final int cognitiveComplexity;
+  final int linesOfCode;
 
   Map<String, dynamic> toJson() => {
         'maintainabilityIndex': maintainabilityIndex,

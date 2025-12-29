@@ -520,50 +520,52 @@ Future<void> _runDebt(ArgResults args) async {
   final aggregator = DebtAggregator(config: config);
   final miCalculator = MaintainabilityIndexCalculator();
 
-  final files = sourceLoader.discoverDartFiles();
-  var processed = 0;
+  try {
+    final files = sourceLoader.discoverDartFiles();
+    var processed = 0;
 
-  for (final file in files) {
-    // Check exclusions
-    if (_isExcluded(file, config.exclude)) continue;
+    for (final file in files) {
+      // Check exclusions
+      if (_isExcluded(file, config.exclude)) continue;
 
-    final result = await sourceLoader.resolveFile(file);
-    if (result == null) continue;
+      final result = await sourceLoader.resolveFile(file);
+      if (result == null) continue;
 
-    final metrics = miCalculator.calculateForFile(result.unit);
-    aggregator.addFile(
-      file,
-      result.unit,
-      lineInfo: result.lineInfo,
-      metrics: metrics,
-    );
-    processed++;
+      final metrics = miCalculator.calculateForFile(result.unit);
+      aggregator.addFile(
+        file,
+        result.unit,
+        lineInfo: result.lineInfo,
+        metrics: metrics,
+      );
+      processed++;
 
-    if (!quiet) stdout.write('\rProcessing: $processed/${files.length}');
-  }
-  if (!quiet) print('\n');
+      if (!quiet) stdout.write('\rProcessing: $processed/${files.length}');
+    }
+    if (!quiet) print('\n');
 
-  final report = aggregator.generateReport();
+    final report = aggregator.generateReport();
 
-  // Format output
-  final reportOutput = switch (format) {
-    'json' => const JsonEncoder.withIndent('  ').convert(report.toJson()),
-    'markdown' => report.toMarkdown(),
-    _ => report.toConsole(),
-  };
+    // Format output
+    final reportOutput = switch (format) {
+      'json' => const JsonEncoder.withIndent('  ').convert(report.toJson()),
+      'markdown' => report.toMarkdown(),
+      _ => report.toConsole(),
+    };
 
-  if (output != null) {
-    await File(output).writeAsString(reportOutput);
-    print('Report written to $output');
-  } else {
-    print(reportOutput);
-  }
+    if (output != null) {
+      await File(output).writeAsString(reportOutput);
+      print('Report written to $output');
+    } else {
+      print(reportOutput);
+    }
 
-  await sourceLoader.dispose();
-
-  // Exit code based on threshold
-  if (failOnThreshold && report.summary.exceedsThreshold) {
-    exit(1);
+    // Exit code based on threshold
+    if (failOnThreshold && report.summary.exceedsThreshold) {
+      exit(1);
+    }
+  } finally {
+    await sourceLoader.dispose();
   }
 }
 
@@ -644,81 +646,85 @@ Future<void> _runClones(ArgResults args) async {
 
   // Load runtime and detector
   final runtime = NativeOnnxRuntime();
-  await runtime.loadModel(modelPath);
-
-  final detector = SemanticCloneDetector(
-    runtime: runtime,
-    tokenizer: tokenizer,
-    similarityThreshold: threshold,
-  );
-
-  // Discover and analyze functions
   final sourceLoader = SourceLoader(path);
-  final files = sourceLoader.discoverDartFiles();
-  final functions = <_FunctionInfo>[];
 
-  var processed = 0;
-  for (final file in files) {
-    final result = await sourceLoader.resolveFile(file);
-    if (result == null) continue;
+  try {
+    await runtime.loadModel(modelPath);
 
-    // Extract functions from the file
-    final visitor = _FunctionExtractor(file);
-    result.unit.visitChildren(visitor);
-    functions.addAll(visitor.functions);
+    final detector = SemanticCloneDetector(
+      runtime: runtime,
+      tokenizer: tokenizer,
+      similarityThreshold: threshold,
+    );
 
-    processed++;
-    if (!quiet) stdout.write('\rIndexing: $processed/${files.length}');
-  }
-  if (!quiet) print('\n');
+    // Discover and analyze functions
+    final files = sourceLoader.discoverDartFiles();
+    final functions = <_FunctionInfo>[];
 
-  // Index all functions
-  if (!quiet) print('Indexing ${functions.length} functions...');
-  for (final func in functions) {
-    await detector.indexFunction(func.id, func.code);
-  }
+    var processed = 0;
+    for (final file in files) {
+      final result = await sourceLoader.resolveFile(file);
+      if (result == null) continue;
 
-  // Find clones
-  if (!quiet) print('Finding clones...\n');
-  final clones = <_ClonePair>[];
+      // Extract functions from the file
+      final visitor = _FunctionExtractor(file);
+      result.unit.visitChildren(visitor);
+      functions.addAll(visitor.functions);
 
-  for (var i = 0; i < functions.length; i++) {
-    final func = functions[i];
-    final candidates = await detector.findClones(func.id, func.code);
+      processed++;
+      if (!quiet) stdout.write('\rIndexing: $processed/${files.length}');
+    }
+    if (!quiet) print('\n');
 
-    for (final candidate in candidates) {
-      // Avoid duplicate pairs (only report A->B, not B->A)
-      if (func.id.compareTo(candidate.functionId) < 0) {
-        final other = functions.firstWhere((f) => f.id == candidate.functionId);
-        clones.add(_ClonePair(
-          source: func,
-          target: other,
-          similarity: candidate.similarity,
-        ));
+    // Index all functions
+    if (!quiet) print('Indexing ${functions.length} functions...');
+    for (final func in functions) {
+      await detector.indexFunction(func.id, func.code);
+    }
+
+    // Find clones
+    if (!quiet) print('Finding clones...\n');
+    final clones = <_ClonePair>[];
+
+    for (var i = 0; i < functions.length; i++) {
+      final func = functions[i];
+      final candidates = await detector.findClones(func.id, func.code);
+
+      for (final candidate in candidates) {
+        // Avoid duplicate pairs (only report A->B, not B->A)
+        if (func.id.compareTo(candidate.functionId) < 0) {
+          final other =
+              functions.firstWhere((f) => f.id == candidate.functionId);
+          clones.add(_ClonePair(
+            source: func,
+            target: other,
+            similarity: candidate.similarity,
+          ));
+        }
+      }
+
+      if (!quiet) {
+        stdout.write('\rAnalyzing: ${i + 1}/${functions.length}');
       }
     }
+    if (!quiet) print('\n');
 
-    if (!quiet) {
-      stdout.write('\rAnalyzing: ${i + 1}/${functions.length}');
+    // Format output
+    final reportOutput = switch (format) {
+      'json' => _formatClonesJson(clones),
+      _ => _formatClonesText(clones, threshold),
+    };
+
+    if (output != null) {
+      await File(output).writeAsString(reportOutput);
+      print('Report written to $output');
+    } else {
+      print(reportOutput);
     }
+  } finally {
+    runtime.dispose();
+    await sourceLoader.dispose();
   }
-  if (!quiet) print('\n');
-
-  // Format output
-  final reportOutput = switch (format) {
-    'json' => _formatClonesJson(clones),
-    _ => _formatClonesText(clones, threshold),
-  };
-
-  if (output != null) {
-    await File(output).writeAsString(reportOutput);
-    print('Report written to $output');
-  } else {
-    print(reportOutput);
-  }
-
-  runtime.dispose();
-  await sourceLoader.dispose();
 }
 
 String _formatClonesText(List<_ClonePair> clones, double threshold) {
@@ -767,12 +773,6 @@ String _formatClonesJson(List<_ClonePair> clones) {
 }
 
 class _FunctionInfo {
-  final String id;
-  final String name;
-  final String file;
-  final int line;
-  final String code;
-
   _FunctionInfo({
     required this.id,
     required this.name,
@@ -780,25 +780,31 @@ class _FunctionInfo {
     required this.line,
     required this.code,
   });
+
+  final String id;
+  final String name;
+  final String file;
+  final int line;
+  final String code;
 }
 
 class _ClonePair {
-  final _FunctionInfo source;
-  final _FunctionInfo target;
-  final double similarity;
-
   _ClonePair({
     required this.source,
     required this.target,
     required this.similarity,
   });
+
+  final _FunctionInfo source;
+  final _FunctionInfo target;
+  final double similarity;
 }
 
 class _FunctionExtractor extends RecursiveAstVisitor<void> {
+  _FunctionExtractor(this.file);
+
   final String file;
   final List<_FunctionInfo> functions = [];
-
-  _FunctionExtractor(this.file);
 
   @override
   void visitFunctionDeclaration(FunctionDeclaration node) {
@@ -889,13 +895,6 @@ _DebtOptionsConfig _loadDebtOptions(String projectPath) {
 }
 
 class _DebtOptionsConfig {
-  final Map<DebtType, double> costs;
-  final Map<DebtSeverity, double> multipliers;
-  final String unit;
-  final double threshold;
-  final DebtMetricsThresholds metricsThresholds;
-  final List<String> exclude;
-
   _DebtOptionsConfig({
     required this.costs,
     required this.multipliers,
@@ -962,6 +961,13 @@ class _DebtOptionsConfig {
     );
   }
 
+  final Map<DebtType, double> costs;
+  final Map<DebtSeverity, double> multipliers;
+  final String unit;
+  final double threshold;
+  final DebtMetricsThresholds metricsThresholds;
+  final List<String> exclude;
+
   static DebtType? _parseDebtType(String key) {
     final normalized = key.replaceAll('-', '').toLowerCase();
     for (final type in DebtType.values) {
@@ -1021,17 +1027,17 @@ Future<void> _runWithWatch(String path, Future<int> Function() runOnce) async {
 
 /// Configuration loaded from analysis_options.yaml
 class _AnalysisOptionsConfig {
-  final int maxCyclomatic;
-  final double minMaintainability;
-  final int maxCognitive;
-  final int maxLinesOfCode;
-
   _AnalysisOptionsConfig({
     this.maxCyclomatic = 20,
     this.minMaintainability = 50.0,
     this.maxCognitive = 15,
     this.maxLinesOfCode = 100,
   });
+
+  final int maxCyclomatic;
+  final double minMaintainability;
+  final int maxCognitive;
+  final int maxLinesOfCode;
 }
 
 /// Loads analysis options from analysis_options.yaml if present.

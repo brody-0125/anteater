@@ -13,7 +13,7 @@ import '../cfg/control_flow_graph.dart';
 /// - Braun et al., 2013
 class SsaBuilder {
   /// Current definition of each variable in each block.
-  /// Map<BlockId, Map<VariableName, Value>>
+  /// `Map<BlockId, Map<VariableName, Value>>`
   final Map<int, Map<String, Value>> _currentDef = {};
 
   /// Tracks incomplete phis that need operands filled in.

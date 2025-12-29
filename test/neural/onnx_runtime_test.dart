@@ -209,7 +209,7 @@ void main() {
 
   group('CloneCandidate', () {
     test('toString formats percentage correctly', () {
-      final candidate = CloneCandidate(
+      const candidate = CloneCandidate(
         functionId: 'myFunc',
         similarity: 0.95,
       );
@@ -221,7 +221,7 @@ void main() {
     });
 
     test('toString handles 100% similarity', () {
-      final candidate = CloneCandidate(
+      const candidate = CloneCandidate(
         functionId: 'func',
         similarity: 1.0,
       );
@@ -233,7 +233,7 @@ void main() {
     });
 
     test('toString handles low similarity', () {
-      final candidate = CloneCandidate(
+      const candidate = CloneCandidate(
         functionId: 'lowSim',
         similarity: 0.123,
       );
@@ -245,7 +245,7 @@ void main() {
     });
 
     test('stores functionId and similarity correctly', () {
-      final candidate = CloneCandidate(
+      const candidate = CloneCandidate(
         functionId: 'testId',
         similarity: 0.87,
       );

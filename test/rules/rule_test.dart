@@ -460,7 +460,7 @@ anteater:
           .enableRule('avoid-dynamic')
           .configureRule('prefer-async-await',
               severity: RuleSeverity.error, exclude: ['generated/**'])
-          .withMetrics(MetricsThresholds(cyclomaticComplexity: 15))
+          .withMetrics(const MetricsThresholds(cyclomaticComplexity: 15))
           .build();
 
       expect(config.excludePatterns, contains('test/**'));
@@ -473,7 +473,7 @@ anteater:
 
   group('Violation', () {
     test('toString includes location and message', () {
-      final violation = Violation(
+      const violation = Violation(
         ruleId: 'test-rule',
         message: 'Test message',
         location: SourceRange(
@@ -495,13 +495,13 @@ anteater:
       final result = AnalysisResult(
         violationsByFile: {
           'file1.dart': [
-            Violation(
+            const Violation(
               ruleId: 'rule1',
               message: 'msg',
               location: SourceRange.zero,
               severity: RuleSeverity.error,
             ),
-            Violation(
+            const Violation(
               ruleId: 'rule1',
               message: 'msg',
               location: SourceRange.zero,
@@ -509,7 +509,7 @@ anteater:
             ),
           ],
           'file2.dart': [
-            Violation(
+            const Violation(
               ruleId: 'rule2',
               message: 'msg',
               location: SourceRange.zero,

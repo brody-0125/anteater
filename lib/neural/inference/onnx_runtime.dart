@@ -1,4 +1,5 @@
 import 'dart:ffi';
+import 'dart:math' as math;
 
 import 'package:dart_bert_tokenizer/dart_bert_tokenizer.dart' show WordPieceTokenizer;
 
@@ -31,16 +32,7 @@ abstract class OnnxRuntime {
 
     if (normA == 0 || normB == 0) return 0;
 
-    return dotProduct / (_sqrt(normA) * _sqrt(normB));
-  }
-
-  static double _sqrt(double x) {
-    if (x <= 0) return 0;
-    var guess = x / 2;
-    for (var i = 0; i < 20; i++) {
-      guess = (guess + x / guess) / 2;
-    }
-    return guess;
+    return dotProduct / (math.sqrt(normA) * math.sqrt(normB));
   }
 
   /// Disposes resources.
@@ -51,12 +43,12 @@ abstract class OnnxRuntime {
 ///
 /// Requires pre-compiled Soufflé program as shared library.
 class NativeOnnxRuntime implements OnnxRuntime {
+  NativeOnnxRuntime({this.libraryPath = 'libonnxruntime.so'});
+
   final String libraryPath;
   // ignore: unused_field - placeholder for future FFI implementation
   DynamicLibrary? _lib;
   bool _modelLoaded = false;
-
-  NativeOnnxRuntime({this.libraryPath = 'libonnxruntime.so'});
 
   @override
   Future<void> loadModel(String modelPath) async {
@@ -85,13 +77,6 @@ class NativeOnnxRuntime implements OnnxRuntime {
 
 /// Semantic clone detector using embeddings.
 class SemanticCloneDetector {
-  final OnnxRuntime _runtime;
-  final WordPieceTokenizer _tokenizer;
-  final double _similarityThreshold;
-
-  /// Cached embeddings for functions.
-  final Map<String, List<double>> _embeddings = {};
-
   SemanticCloneDetector({
     required OnnxRuntime runtime,
     required WordPieceTokenizer tokenizer,
@@ -99,6 +84,13 @@ class SemanticCloneDetector {
   })  : _runtime = runtime,
         _tokenizer = tokenizer,
         _similarityThreshold = similarityThreshold;
+
+  final OnnxRuntime _runtime;
+  final WordPieceTokenizer _tokenizer;
+  final double _similarityThreshold;
+
+  /// Cached embeddings for functions.
+  final Map<String, List<double>> _embeddings = {};
 
   /// Computes and caches embedding for a function.
   Future<void> indexFunction(String functionId, String code) async {
@@ -144,13 +136,13 @@ class SemanticCloneDetector {
 
 /// A potential semantic clone.
 class CloneCandidate {
-  final String functionId;
-  final double similarity;
-
   const CloneCandidate({
     required this.functionId,
     required this.similarity,
   });
+
+  final String functionId;
+  final double similarity;
 
   @override
   String toString() =>

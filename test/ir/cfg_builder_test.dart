@@ -340,7 +340,7 @@ int paramExample(int x, String y) {
         final cfg = builder.buildFromFunction(func);
 
         // Create parameters list (simulating what IrGenerator does)
-        final parameters = [Variable('x'), Variable('y')];
+        final parameters = [const Variable('x'), const Variable('y')];
         final ssaCfg = cfg.toSsa(parameters);
 
         expect(ssaCfg, isNotNull);

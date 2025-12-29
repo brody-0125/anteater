@@ -1,10 +1,12 @@
 # Anteater
 
+---
+
 <p align="center">
   <img src="resource/logo.png" alt="Anteater Logo" width="300">
 </p>
 
-**Static Analysis Engine for Dart**
+### **Static Analysis Engine for Dart**
 
 Anteater is a static analyzer for Dart that provides SSA-based data flow analysis, Datalog-based reasoning, code metrics, and configurable lint rules.
 

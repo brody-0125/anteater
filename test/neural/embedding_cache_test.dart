@@ -18,7 +18,7 @@ void main() {
 
     tearDown(() async {
       final dir = Directory(tempDir);
-      if (await dir.exists()) {
+      if (dir.existsSync()) {
         await dir.delete(recursive: true);
       }
     });
@@ -170,7 +170,7 @@ void main() {
         nestedCache.put('func1', 'hash1', List.generate(768, (i) => i.toDouble()));
         await nestedCache.save();
 
-        expect(await File('$tempDir/nested/deep/cache.json').exists(), isTrue);
+        expect(File('$tempDir/nested/deep/cache.json').existsSync(), isTrue);
       });
     });
 
@@ -291,7 +291,7 @@ void main() {
 
   group('SimilarityResult', () {
     test('toString formats correctly', () {
-      final result = SimilarityResult(
+      const result = SimilarityResult(
         functionId: 'testFunc',
         similarity: 0.95,
       );

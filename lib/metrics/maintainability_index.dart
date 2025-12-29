@@ -13,10 +13,10 @@ import 'complexity_calculator.dart';
 /// - G = Cyclomatic Complexity
 /// - LOC = Lines of Code
 class MaintainabilityIndexCalculator {
-  final ComplexityCalculator _complexityCalculator;
-
   MaintainabilityIndexCalculator([ComplexityCalculator? calculator])
       : _complexityCalculator = calculator ?? ComplexityCalculator();
+
+  final ComplexityCalculator _complexityCalculator;
 
   /// Calculates the maintainability index for a function/method.
   MaintainabilityResult calculate(FunctionBody body) {
@@ -119,13 +119,6 @@ class MaintainabilityIndexCalculator {
 
 /// Result of maintainability calculation for a single function.
 class MaintainabilityResult {
-  final double maintainabilityIndex;
-  final int cyclomaticComplexity;
-  final int cognitiveComplexity;
-  final HalsteadMetrics halsteadMetrics;
-  final int linesOfCode;
-  final MaintainabilityRating rating;
-
   const MaintainabilityResult({
     required this.maintainabilityIndex,
     required this.cyclomaticComplexity,
@@ -134,6 +127,13 @@ class MaintainabilityResult {
     required this.linesOfCode,
     required this.rating,
   });
+
+  final double maintainabilityIndex;
+  final int cyclomaticComplexity;
+  final int cognitiveComplexity;
+  final HalsteadMetrics halsteadMetrics;
+  final int linesOfCode;
+  final MaintainabilityRating rating;
 
   @override
   String toString() => '''
@@ -148,15 +148,15 @@ MaintainabilityResult(
 
 /// Result of maintainability calculation for an entire file.
 class FileMaintainabilityResult {
-  final Map<String, MaintainabilityResult> functions;
-  final double averageMaintainabilityIndex;
-  final MaintainabilityRating rating;
-
   const FileMaintainabilityResult({
     required this.functions,
     required this.averageMaintainabilityIndex,
     required this.rating,
   });
+
+  final Map<String, MaintainabilityResult> functions;
+  final double averageMaintainabilityIndex;
+  final MaintainabilityRating rating;
 
   /// Returns functions that need attention (MI < 50).
   Iterable<MapEntry<String, MaintainabilityResult>> get needsAttention =>
@@ -185,11 +185,11 @@ enum MaintainabilityRating {
   /// MI < 50: Difficult to maintain
   poor('🔴', 'Poor');
 
+  const MaintainabilityRating(this.emoji, this.label);
+
   /// Visual indicator emoji.
   final String emoji;
 
   /// Human-readable label.
   final String label;
-
-  const MaintainabilityRating(this.emoji, this.label);
 }
