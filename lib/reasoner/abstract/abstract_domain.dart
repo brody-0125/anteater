@@ -38,19 +38,11 @@ abstract class AbstractDomain<T extends AbstractDomain<T>> {
 /// Represents values as [min, max] where min, max ∈ ℤ ∪ {-∞, +∞}.
 /// Used for array bounds checking and integer overflow detection.
 class IntervalDomain implements AbstractDomain<IntervalDomain> {
-  final int? min; // null represents -∞
-  final int? max; // null represents +∞
-
   const IntervalDomain(this.min, this.max);
 
-  /// Bottom element (empty interval).
-  static const IntervalDomain bottomValue = IntervalDomain._bottom();
   const IntervalDomain._bottom()
       : min = 1,
         max = 0; // Represents empty interval
-
-  /// Top element (all integers).
-  static const IntervalDomain topValue = IntervalDomain(null, null);
 
   /// Creates an interval from a single constant.
   factory IntervalDomain.constant(int value) => IntervalDomain(value, value);
@@ -58,6 +50,15 @@ class IntervalDomain implements AbstractDomain<IntervalDomain> {
   /// Creates an interval [0, n-1] for array indices.
   factory IntervalDomain.arrayIndex(int length) =>
       IntervalDomain(0, length - 1);
+
+  final int? min; // null represents -∞
+  final int? max; // null represents +∞
+
+  /// Bottom element (empty interval).
+  static const IntervalDomain bottomValue = IntervalDomain._bottom();
+
+  /// Top element (all integers).
+  static const IntervalDomain topValue = IntervalDomain(null, null);
 
   @override
   bool get isBottom => min != null && max != null && min! > max!;
@@ -298,7 +299,7 @@ class IntervalDomain implements AbstractDomain<IntervalDomain> {
     if (min == null || max == null || other.min == null || other.max == null) {
       // Result of a % b is in range [0, |b|-1] for positive a
       // or [-(|b|-1), |b|-1] for possibly negative a
-      final maxDivisor = other.max != null ? other.max!.abs() : null;
+      final maxDivisor = other.max?.abs();
       if (maxDivisor == null) return topValue;
 
       if (min != null && min! >= 0) {
@@ -395,11 +396,11 @@ class IntervalDomain implements AbstractDomain<IntervalDomain> {
 
 /// Abstract state mapping variables to their abstract values.
 class AbstractState<D extends AbstractDomain<D>> {
-  final Map<String, D> _values;
-  final D _defaultValue;
-
   AbstractState(this._defaultValue, [Map<String, D>? values])
       : _values = values ?? {};
+
+  final D _defaultValue;
+  final Map<String, D> _values;
 
   /// Returns the value for a variable, or TOP if not defined.
   D operator [](String variable) => _values[variable] ?? _defaultValue.top;
@@ -482,9 +483,9 @@ enum Nullability {
 ///
 /// Used for null safety verification and detecting potential null dereferences.
 class NullabilityDomain implements AbstractDomain<NullabilityDomain> {
-  final Nullability state;
-
   const NullabilityDomain(this.state);
+
+  final Nullability state;
 
   /// Bottom element (unreachable).
   static const NullabilityDomain bottomValue =
@@ -614,10 +615,10 @@ class NullabilityDomain implements AbstractDomain<NullabilityDomain> {
 ///
 /// Tracks both the numeric range and null status of variables.
 class CombinedDomain implements AbstractDomain<CombinedDomain> {
-  final IntervalDomain interval;
-  final NullabilityDomain nullability;
-
   const CombinedDomain(this.interval, this.nullability);
+
+  final NullabilityDomain nullability;
+  final IntervalDomain interval;
 
   static const CombinedDomain bottomValue = CombinedDomain(
     IntervalDomain.bottomValue,

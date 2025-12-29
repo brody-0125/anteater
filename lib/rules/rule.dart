@@ -59,6 +59,15 @@ abstract class StyleRule {
 
 /// Represents a violation of a style rule.
 class Violation {
+  const Violation({
+    required this.ruleId,
+    required this.message,
+    required this.location,
+    required this.severity,
+    this.suggestion,
+    this.sourceCode,
+  });
+
   /// The rule that was violated.
   final String ruleId;
 
@@ -77,15 +86,6 @@ class Violation {
   /// Optional code that triggered the violation.
   final String? sourceCode;
 
-  const Violation({
-    required this.ruleId,
-    required this.message,
-    required this.location,
-    required this.severity,
-    this.suggestion,
-    this.sourceCode,
-  });
-
   @override
   String toString() =>
       'Violation($ruleId at ${location.start.line}:${location.start.column}: $message)';
@@ -93,18 +93,6 @@ class Violation {
 
 /// Represents a range in source code.
 class SourceRange {
-  /// Start position.
-  final SourcePosition start;
-
-  /// End position.
-  final SourcePosition end;
-
-  /// Offset from beginning of file.
-  final int offset;
-
-  /// Length of the range.
-  final int length;
-
   const SourceRange({
     required this.start,
     required this.end,
@@ -148,6 +136,18 @@ class SourceRange {
     );
   }
 
+  /// Start position.
+  final SourcePosition start;
+
+  /// End position.
+  final SourcePosition end;
+
+  /// Offset from beginning of file.
+  final int offset;
+
+  /// Length of the range.
+  final int length;
+
   /// Zero range for unknown locations.
   static const zero = SourceRange(
     start: SourcePosition(line: 0, column: 0),
@@ -162,16 +162,16 @@ class SourceRange {
 
 /// Represents a position in source code.
 class SourcePosition {
+  const SourcePosition({
+    required this.line,
+    required this.column,
+  });
+
   /// 1-based line number.
   final int line;
 
   /// 1-based column number.
   final int column;
-
-  const SourcePosition({
-    required this.line,
-    required this.column,
-  });
 
   @override
   String toString() => '$line:$column';
@@ -179,18 +179,6 @@ class SourcePosition {
 
 /// Settings for a specific rule.
 class RuleSettings {
-  /// Whether the rule is enabled.
-  final bool enabled;
-
-  /// Override severity (null = use default).
-  final RuleSeverity? severity;
-
-  /// Rule-specific options (unmodifiable).
-  final Map<String, dynamic> options;
-
-  /// File patterns to exclude from this rule (unmodifiable).
-  final List<String> exclude;
-
   /// Private const constructor for internal use and static instances.
   const RuleSettings._({
     required this.enabled,
@@ -214,6 +202,18 @@ class RuleSettings {
         options: Map.unmodifiable(options),
         exclude: List.unmodifiable(exclude),
       );
+
+  /// Whether the rule is enabled.
+  final bool enabled;
+
+  /// Override severity (null = use default).
+  final RuleSeverity? severity;
+
+  /// Rule-specific options (unmodifiable).
+  final Map<String, dynamic> options;
+
+  /// File patterns to exclude from this rule (unmodifiable).
+  final List<String> exclude;
 
   /// Default settings with rule enabled.
   static const defaultEnabled = RuleSettings._(

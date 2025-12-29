@@ -357,38 +357,38 @@ class _HalsteadVisitor extends RecursiveAstVisitor<void> {
     return HalsteadMetrics(
       n1: uniqueOperators.length,
       n2: uniqueOperands.length,
-      N1: totalOperators,
-      N2: totalOperands,
+      operatorTotal: totalOperators,
+      operandTotal: totalOperands,
     );
   }
 }
 
 /// Halstead complexity metrics.
 class HalsteadMetrics {
-  /// Unique operators count.
-  final int n1;
-
-  /// Unique operands count.
-  final int n2;
-
-  /// Total operators count.
-  final int N1;
-
-  /// Total operands count.
-  final int N2;
-
   const HalsteadMetrics({
     required this.n1,
     required this.n2,
-    required this.N1,
-    required this.N2,
+    required this.operatorTotal,
+    required this.operandTotal,
   });
 
-  /// Program vocabulary: n = n1 + n2
+  /// Unique operators count (n₁).
+  final int n1;
+
+  /// Unique operands count (n₂).
+  final int n2;
+
+  /// Total operators count (N₁).
+  final int operatorTotal;
+
+  /// Total operands count (N₂).
+  final int operandTotal;
+
+  /// Program vocabulary: n = n₁ + n₂
   int get vocabulary => n1 + n2;
 
-  /// Program length: N = N1 + N2
-  int get length => N1 + N2;
+  /// Program length: N = N₁ + N₂
+  int get length => operatorTotal + operandTotal;
 
   /// Halstead volume: V = N × log₂(n)
   double get volume {
@@ -396,10 +396,10 @@ class HalsteadMetrics {
     return length * (math.log(vocabulary) / math.log(2));
   }
 
-  /// Difficulty: D = (n1/2) × (N2/n2)
+  /// Difficulty: D = (n₁/2) × (N₂/n₂)
   double get difficulty {
     if (n2 == 0) return 0;
-    return (n1 / 2) * (N2 / n2);
+    return (n1 / 2) * (operandTotal / n2);
   }
 
   /// Effort: E = D × V

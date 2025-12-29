@@ -32,10 +32,10 @@ class NoEmptyBlockRule extends StyleRule {
 }
 
 class _NoEmptyBlockVisitor extends RecursiveAstVisitor<void> {
+  _NoEmptyBlockVisitor(this.lineInfo);
+
   final LineInfo lineInfo;
   final List<Violation> violations = [];
-
-  _NoEmptyBlockVisitor(this.lineInfo);
 
   @override
   void visitBlock(Block node) {

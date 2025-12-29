@@ -7,7 +7,7 @@ import 'package:anteater/server/diagnostics_provider.dart';
 void main() {
   group('Diagnostic', () {
     test('creates diagnostic with required fields', () {
-      final diagnostic = Diagnostic(
+      const diagnostic = Diagnostic(
         message: 'Test message',
         severity: DiagnosticSeverity.warning,
         range: Range.zero,
@@ -21,7 +21,7 @@ void main() {
     });
 
     test('creates diagnostic with optional code', () {
-      final diagnostic = Diagnostic(
+      const diagnostic = Diagnostic(
         message: 'Test message',
         severity: DiagnosticSeverity.error,
         range: Range.zero,
@@ -33,7 +33,7 @@ void main() {
     });
 
     test('toJson includes all fields', () {
-      final diagnostic = Diagnostic(
+      const diagnostic = Diagnostic(
         message: 'Test message',
         severity: DiagnosticSeverity.warning,
         range: Range.zero,
@@ -49,7 +49,7 @@ void main() {
     });
 
     test('toString formats severity and message', () {
-      final diagnostic = Diagnostic(
+      const diagnostic = Diagnostic(
         message: 'Test message',
         severity: DiagnosticSeverity.error,
         range: Range.zero,
@@ -70,22 +70,24 @@ void main() {
     });
 
     test('toJson returns correct structure', () {
-      final range = Range(
+      const range = Range(
         start: Position(line: 1, character: 5),
         end: Position(line: 2, character: 10),
       );
 
       final json = range.toJson();
-      expect(json['start']['line'], equals(1));
-      expect(json['start']['character'], equals(5));
-      expect(json['end']['line'], equals(2));
-      expect(json['end']['character'], equals(10));
+      final start = json['start'] as Map<String, dynamic>;
+      final end = json['end'] as Map<String, dynamic>;
+      expect(start['line'], equals(1));
+      expect(start['character'], equals(5));
+      expect(end['line'], equals(2));
+      expect(end['character'], equals(10));
     });
   });
 
   group('Position', () {
     test('toJson returns line and character', () {
-      final position = Position(line: 5, character: 10);
+      const position = Position(line: 5, character: 10);
 
       final json = position.toJson();
       expect(json['line'], equals(5));
@@ -119,7 +121,7 @@ void main() {
     });
 
     test('returns extract method action for high cyclomatic complexity', () async {
-      final diagnostic = Diagnostic(
+      const diagnostic = Diagnostic(
         message: 'High complexity',
         severity: DiagnosticSeverity.warning,
         range: Range.zero,
@@ -139,7 +141,7 @@ void main() {
     });
 
     test('returns null check action for potential null dereference', () async {
-      final diagnostic = Diagnostic(
+      const diagnostic = Diagnostic(
         message: 'Potential null',
         severity: DiagnosticSeverity.warning,
         range: Range.zero,
@@ -160,7 +162,7 @@ void main() {
     });
 
     test('returns bounds check action for bounds violation', () async {
-      final diagnostic = Diagnostic(
+      const diagnostic = Diagnostic(
         message: 'Bounds violation',
         severity: DiagnosticSeverity.warning,
         range: Range.zero,
@@ -181,14 +183,14 @@ void main() {
 
     test('returns actions for multiple diagnostics', () async {
       final diagnostics = [
-        Diagnostic(
+        const Diagnostic(
           message: 'Complexity',
           severity: DiagnosticSeverity.warning,
           range: Range.zero,
           source: 'anteater',
           code: 'high_cyclomatic_complexity',
         ),
-        Diagnostic(
+        const Diagnostic(
           message: 'Too long',
           severity: DiagnosticSeverity.info,
           range: Range.zero,
@@ -209,14 +211,14 @@ void main() {
 
   group('CodeAction', () {
     test('toJson includes all fields', () {
-      final diagnostic = Diagnostic(
+      const diagnostic = Diagnostic(
         message: 'Test',
         severity: DiagnosticSeverity.warning,
         range: Range.zero,
         source: 'anteater',
       );
 
-      final action = CodeAction(
+      const action = CodeAction(
         title: 'Fix it',
         kind: CodeActionKind.quickfix,
         diagnostic: diagnostic,
@@ -231,7 +233,7 @@ void main() {
     });
 
     test('toJson includes command when present', () {
-      final action = CodeAction(
+      const action = CodeAction(
         title: 'Extract',
         kind: CodeActionKind.refactorExtract,
         command: CodeCommand(
@@ -243,7 +245,8 @@ void main() {
 
       final json = action.toJson();
       expect(json['command'], isNotNull);
-      expect(json['command']['command'], equals('anteater.extractMethod'));
+      final command = json['command'] as Map<String, dynamic>;
+      expect(command['command'], equals('anteater.extractMethod'));
     });
   });
 
@@ -264,7 +267,7 @@ void main() {
 
   group('TextEdit', () {
     test('toJson returns range and newText', () {
-      final edit = TextEdit(
+      const edit = TextEdit(
         range: Range(
           start: Position(line: 1, character: 0),
           end: Position(line: 1, character: 10),
@@ -280,7 +283,7 @@ void main() {
 
   group('CodeCommand', () {
     test('toJson returns title and command', () {
-      final command = CodeCommand(
+      const command = CodeCommand(
         title: 'Run Test',
         command: 'anteater.runTest',
       );
@@ -292,7 +295,7 @@ void main() {
     });
 
     test('toJson includes arguments when present', () {
-      final command = CodeCommand(
+      const command = CodeCommand(
         title: 'Run Test',
         command: 'anteater.runTest',
         arguments: ['arg1', 'arg2'],
@@ -305,7 +308,7 @@ void main() {
 
   group('Hover', () {
     test('toJson returns contents and range', () {
-      final hover = Hover(
+      const hover = Hover(
         contents: HoverContents(
           kind: MarkupKind.markdown,
           value: '**Bold** text',
@@ -319,7 +322,7 @@ void main() {
     });
 
     test('toJson excludes range when null', () {
-      final hover = Hover(
+      const hover = Hover(
         contents: HoverContents(
           kind: MarkupKind.plaintext,
           value: 'Plain text',
@@ -334,7 +337,7 @@ void main() {
 
   group('HoverContents', () {
     test('toJson returns kind and value', () {
-      final contents = HoverContents(
+      const contents = HoverContents(
         kind: MarkupKind.markdown,
         value: '# Heading',
       );
@@ -382,7 +385,7 @@ void main() {
 
   group('ProjectAnalysisResult', () {
     test('calculates totalDiagnostics correctly', () {
-      final result = ProjectAnalysisResult(
+      const result = ProjectAnalysisResult(
         fileCount: 2,
         diagnostics: {
           '/file1.dart': [
@@ -414,7 +417,7 @@ void main() {
     });
 
     test('counts errors correctly', () {
-      final result = ProjectAnalysisResult(
+      const result = ProjectAnalysisResult(
         fileCount: 1,
         diagnostics: {
           '/file.dart': [
@@ -439,7 +442,7 @@ void main() {
     });
 
     test('toString formats correctly', () {
-      final result = ProjectAnalysisResult(
+      const result = ProjectAnalysisResult(
         fileCount: 5,
         diagnostics: {},
       );

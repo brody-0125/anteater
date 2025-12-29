@@ -19,6 +19,23 @@ import 'language_server.dart';
 /// Converts analysis from various engines (metrics, abstract interpretation,
 /// datalog, style rules) into LSP-compatible diagnostic messages.
 class DiagnosticsProvider {
+  DiagnosticsProvider({
+    required SourceLoader sourceLoader,
+    MaintainabilityIndexCalculator? miCalculator,
+    DiagnosticThresholds? thresholds,
+    RuleRegistry? ruleRegistry,
+    List<String>? excludePatterns,
+  })  : _sourceLoader = sourceLoader,
+        thresholds = thresholds ?? const DiagnosticThresholds(),
+        _miCalculator = miCalculator ??
+            MaintainabilityIndexCalculator(ComplexityCalculator()),
+        _ruleRegistry = ruleRegistry ?? RuleRegistry.withDefaults() {
+    _ruleRunner = RuleRunner(
+      registry: _ruleRegistry,
+      excludePatterns: excludePatterns ?? const [],
+    );
+  }
+
   final SourceLoader _sourceLoader;
   final MaintainabilityIndexCalculator _miCalculator;
 
@@ -36,23 +53,6 @@ class DiagnosticsProvider {
 
   /// Thresholds for generating warnings.
   final DiagnosticThresholds thresholds;
-
-  DiagnosticsProvider({
-    required SourceLoader sourceLoader,
-    MaintainabilityIndexCalculator? miCalculator,
-    DiagnosticThresholds? thresholds,
-    RuleRegistry? ruleRegistry,
-    List<String>? excludePatterns,
-  })  : _sourceLoader = sourceLoader,
-        thresholds = thresholds ?? const DiagnosticThresholds(),
-        _miCalculator = miCalculator ??
-            MaintainabilityIndexCalculator(ComplexityCalculator()),
-        _ruleRegistry = ruleRegistry ?? RuleRegistry.withDefaults() {
-    _ruleRunner = RuleRunner(
-      registry: _ruleRegistry,
-      excludePatterns: excludePatterns ?? const [],
-    );
-  }
 
   /// Analyzes a file and returns LSP diagnostics.
   Future<List<Diagnostic>> analyze(String filePath, {String? content}) async {
@@ -389,6 +389,14 @@ class DiagnosticsProvider {
 
 /// Configuration thresholds for diagnostic generation.
 class DiagnosticThresholds {
+  const DiagnosticThresholds({
+    this.cyclomaticComplexity = 20,
+    this.cognitiveComplexity = 15,
+    this.maintainabilityIndex = 50.0,
+    this.linesOfCode = 100,
+    this.parameters = 4,
+  });
+
   /// Maximum cyclomatic complexity before warning.
   final int cyclomaticComplexity;
 
@@ -403,12 +411,4 @@ class DiagnosticThresholds {
 
   /// Maximum number of parameters before warning.
   final int parameters;
-
-  const DiagnosticThresholds({
-    this.cyclomaticComplexity = 20,
-    this.cognitiveComplexity = 15,
-    this.maintainabilityIndex = 50.0,
-    this.linesOfCode = 100,
-    this.parameters = 4,
-  });
 }

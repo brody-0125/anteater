@@ -5,6 +5,15 @@ import 'abstract_domain.dart';
 
 /// Result of abstract interpretation analysis.
 class AnalysisResult<D extends AbstractDomain<D>> {
+  AnalysisResult({
+    required this.entryStates,
+    required this.exitStates,
+    required this.iterations,
+    required this.wideningApplied,
+    this.narrowingApplied = false,
+    this.narrowingIterations = 0,
+  });
+
   /// Abstract state at the entry of each block.
   final Map<int, AbstractState<D>> entryStates;
 
@@ -23,15 +32,6 @@ class AnalysisResult<D extends AbstractDomain<D>> {
   /// Number of narrowing iterations performed.
   final int narrowingIterations;
 
-  AnalysisResult({
-    required this.entryStates,
-    required this.exitStates,
-    required this.iterations,
-    required this.wideningApplied,
-    this.narrowingApplied = false,
-    this.narrowingIterations = 0,
-  });
-
   /// Gets the abstract value of a variable at block entry.
   D? getValueAtEntry(int blockId, String variable) {
     return entryStates[blockId]?[variable];
@@ -49,6 +49,12 @@ class AnalysisResult<D extends AbstractDomain<D>> {
 /// Supports interval analysis for integer variables and can be extended
 /// for other domains.
 class AbstractInterpreter<D extends AbstractDomain<D>> {
+  AbstractInterpreter(
+    this._defaultValue, {
+    this.wideningThreshold = 3,
+    this.maxIterations = 1000,
+  });
+
   final D _defaultValue;
 
   /// Maximum iterations before forcing widening.
@@ -59,12 +65,6 @@ class AbstractInterpreter<D extends AbstractDomain<D>> {
 
   /// Tracks how many times each block has been visited (for widening).
   final Map<int, int> _blockVisitCount = {};
-
-  AbstractInterpreter(
-    this._defaultValue, {
-    this.wideningThreshold = 3,
-    this.maxIterations = 1000,
-  });
 
   /// Analyzes a CFG and returns the abstract state at each program point.
   AnalysisResult<D> analyze(ControlFlowGraph cfg) {

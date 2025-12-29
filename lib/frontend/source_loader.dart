@@ -30,14 +30,14 @@ import 'package:path/path.dart' as path;
 /// Note: Always call [dispose] when finished to release analyzer resources.
 /// For automatic cleanup, use [Anteater.analyzeMetrics] or [Anteater.analyze].
 class SourceLoader {
-  final String projectPath;
-  late final AnalysisContextCollection _contextCollection;
-
   SourceLoader(this.projectPath) {
     _contextCollection = AnalysisContextCollection(
       includedPaths: [path.absolute(projectPath)],
     );
   }
+
+  final String projectPath;
+  late final AnalysisContextCollection _contextCollection;
 
   /// Returns all Dart files in the project.
   ///

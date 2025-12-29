@@ -11,11 +11,6 @@ library;
 /// - Single exit point (last instruction)
 /// - No internal branches
 class BasicBlock {
-  final int id;
-  final List<Instruction> instructions;
-  final List<BasicBlock> predecessors;
-  final List<BasicBlock> successors;
-
   BasicBlock({
     required this.id,
     List<Instruction>? instructions,
@@ -24,6 +19,11 @@ class BasicBlock {
   })  : instructions = instructions ?? [],
         predecessors = predecessors ?? [],
         successors = successors ?? [];
+
+  final int id;
+  final List<Instruction> instructions;
+  final List<BasicBlock> predecessors;
+  final List<BasicBlock> successors;
 
   /// The terminator instruction (last instruction).
   Instruction? get terminator =>
@@ -51,21 +51,21 @@ class BasicBlock {
 /// This is a sealed class hierarchy, enabling exhaustive pattern matching
 /// in switch statements. All instruction types must be defined in this library.
 sealed class Instruction {
-  final int offset;
-
   Instruction({required this.offset});
+
+  final int offset;
 }
 
 /// Assignment instruction: target = value
 class AssignInstruction extends Instruction {
-  final Variable target;
-  final Value value;
-
   AssignInstruction({
     required super.offset,
     required this.target,
     required this.value,
   });
+
+  final Variable target;
+  final Value value;
 
   @override
   String toString() => '$target = $value';
@@ -73,10 +73,6 @@ class AssignInstruction extends Instruction {
 
 /// Conditional branch instruction.
 class BranchInstruction extends Instruction {
-  final Value condition;
-  final BasicBlock thenBlock;
-  final BasicBlock elseBlock;
-
   BranchInstruction({
     required super.offset,
     required this.condition,
@@ -84,15 +80,19 @@ class BranchInstruction extends Instruction {
     required this.elseBlock,
   });
 
+  final Value condition;
+  final BasicBlock thenBlock;
+  final BasicBlock elseBlock;
+
   @override
   String toString() => 'if ($condition) goto $thenBlock else $elseBlock';
 }
 
 /// Unconditional jump instruction.
 class JumpInstruction extends Instruction {
-  final BasicBlock target;
-
   JumpInstruction({required super.offset, required this.target});
+
+  final BasicBlock target;
 
   @override
   String toString() => 'goto $target';
@@ -100,9 +100,9 @@ class JumpInstruction extends Instruction {
 
 /// Return instruction.
 class ReturnInstruction extends Instruction {
-  final Value? value;
-
   ReturnInstruction({required super.offset, this.value});
+
+  final Value? value;
 
   @override
   String toString() => value != null ? 'return $value' : 'return';
@@ -110,14 +110,14 @@ class ReturnInstruction extends Instruction {
 
 /// Phi function for SSA form.
 class PhiInstruction extends Instruction {
-  final Variable target;
-  final Map<BasicBlock, Value> operands;
-
   PhiInstruction({
     required super.offset,
     required this.target,
     Map<BasicBlock, Value>? operands,
   }) : operands = operands ?? {};
+
+  final Variable target;
+  final Map<BasicBlock, Value> operands;
 
   void addOperand(BasicBlock predecessor, Value value) {
     operands[predecessor] = value;
@@ -132,10 +132,10 @@ class PhiInstruction extends Instruction {
 
 /// Represents a variable in the CFG.
 class Variable {
+  const Variable(this.name, [this.version = 0]);
+
   final String name;
   final int version;
-
-  const Variable(this.name, [this.version = 0]);
 
   Variable withVersion(int newVersion) => Variable(name, newVersion);
 
@@ -160,9 +160,9 @@ sealed class Value {
 
 /// A variable reference as a value.
 class VariableValue extends Value {
-  final Variable variable;
-
   const VariableValue(this.variable) : super();
+
+  final Variable variable;
 
   @override
   String toString() => variable.toString();
@@ -170,9 +170,9 @@ class VariableValue extends Value {
 
 /// A constant value.
 class ConstantValue extends Value {
-  final Object? value;
-
   const ConstantValue(this.value) : super();
+
+  final Object? value;
 
   @override
   String toString() => value?.toString() ?? 'null';
@@ -180,11 +180,11 @@ class ConstantValue extends Value {
 
 /// A binary operation value.
 class BinaryOpValue extends Value {
+  const BinaryOpValue(this.operator, this.left, this.right) : super();
+
   final String operator;
   final Value left;
   final Value right;
-
-  const BinaryOpValue(this.operator, this.left, this.right) : super();
 
   @override
   String toString() => '($left $operator $right)';
@@ -192,10 +192,10 @@ class BinaryOpValue extends Value {
 
 /// A unary operation value.
 class UnaryOpValue extends Value {
+  const UnaryOpValue(this.operator, this.operand) : super();
+
   final String operator;
   final Value operand;
-
-  const UnaryOpValue(this.operator, this.operand) : super();
 
   @override
   String toString() => '($operator$operand)';
@@ -203,15 +203,15 @@ class UnaryOpValue extends Value {
 
 /// Function/method call value.
 class CallValue extends Value {
-  final Value? receiver;
-  final String methodName;
-  final List<Value> arguments;
-
   const CallValue({
     this.receiver,
     required this.methodName,
     required this.arguments,
   }) : super();
+
+  final Value? receiver;
+  final String methodName;
+  final List<Value> arguments;
 
   @override
   String toString() {
@@ -225,10 +225,10 @@ class CallValue extends Value {
 
 /// Field access value.
 class FieldAccessValue extends Value {
+  const FieldAccessValue(this.receiver, this.fieldName) : super();
+
   final Value receiver;
   final String fieldName;
-
-  const FieldAccessValue(this.receiver, this.fieldName) : super();
 
   @override
   String toString() => '$receiver.$fieldName';
@@ -236,10 +236,10 @@ class FieldAccessValue extends Value {
 
 /// Index access value (e.g., list[i]).
 class IndexAccessValue extends Value {
+  const IndexAccessValue(this.receiver, this.index) : super();
+
   final Value receiver;
   final Value index;
-
-  const IndexAccessValue(this.receiver, this.index) : super();
 
   @override
   String toString() => '$receiver[$index]';
@@ -247,15 +247,15 @@ class IndexAccessValue extends Value {
 
 /// Object instantiation value.
 class NewObjectValue extends Value {
-  final String typeName;
-  final String? constructorName;
-  final List<Value> arguments;
-
   const NewObjectValue({
     required this.typeName,
     this.constructorName,
     required this.arguments,
   }) : super();
+
+  final String typeName;
+  final String? constructorName;
+  final List<Value> arguments;
 
   @override
   String toString() {
@@ -267,9 +267,9 @@ class NewObjectValue extends Value {
 
 /// Phi value reference (for SSA).
 class PhiValue extends Value {
-  final Variable variable;
-
   const PhiValue(this.variable) : super();
+
+  final Variable variable;
 
   @override
   String toString() => 'φ(${variable.name})';
@@ -277,11 +277,6 @@ class PhiValue extends Value {
 
 /// Function call instruction.
 class CallInstruction extends Instruction {
-  final Value? receiver;
-  final String methodName;
-  final List<Value> arguments;
-  final Variable? result;
-
   CallInstruction({
     required super.offset,
     this.receiver,
@@ -289,6 +284,11 @@ class CallInstruction extends Instruction {
     required this.arguments,
     this.result,
   });
+
+  final Value? receiver;
+  final String methodName;
+  final List<Value> arguments;
+  final Variable? result;
 
   @override
   String toString() {
@@ -301,10 +301,6 @@ class CallInstruction extends Instruction {
 
 /// Field load instruction.
 class LoadFieldInstruction extends Instruction {
-  final Value base;
-  final String fieldName;
-  final Variable result;
-
   LoadFieldInstruction({
     required super.offset,
     required this.base,
@@ -312,16 +308,16 @@ class LoadFieldInstruction extends Instruction {
     required this.result,
   });
 
+  final Value base;
+  final String fieldName;
+  final Variable result;
+
   @override
   String toString() => '$result = $base.$fieldName';
 }
 
 /// Field store instruction.
 class StoreFieldInstruction extends Instruction {
-  final Value base;
-  final String fieldName;
-  final Value value;
-
   StoreFieldInstruction({
     required super.offset,
     required this.base,
@@ -329,16 +325,16 @@ class StoreFieldInstruction extends Instruction {
     required this.value,
   });
 
+  final Value base;
+  final String fieldName;
+  final Value value;
+
   @override
   String toString() => '$base.$fieldName = $value';
 }
 
 /// Index load instruction.
 class LoadIndexInstruction extends Instruction {
-  final Value base;
-  final Value index;
-  final Variable result;
-
   LoadIndexInstruction({
     required super.offset,
     required this.base,
@@ -346,16 +342,16 @@ class LoadIndexInstruction extends Instruction {
     required this.result,
   });
 
+  final Value base;
+  final Value index;
+  final Variable result;
+
   @override
   String toString() => '$result = $base[$index]';
 }
 
 /// Index store instruction.
 class StoreIndexInstruction extends Instruction {
-  final Value base;
-  final Value index;
-  final Value value;
-
   StoreIndexInstruction({
     required super.offset,
     required this.base,
@@ -363,20 +359,24 @@ class StoreIndexInstruction extends Instruction {
     required this.value,
   });
 
+  final Value base;
+  final Value index;
+  final Value value;
+
   @override
   String toString() => '$base[$index] = $value';
 }
 
 /// Null check instruction (for type promotion).
 class NullCheckInstruction extends Instruction {
-  final Value operand;
-  final Variable result;
-
   NullCheckInstruction({
     required super.offset,
     required this.operand,
     required this.result,
   });
+
+  final Value operand;
+  final Variable result;
 
   @override
   String toString() => '$result = $operand!';
@@ -384,11 +384,6 @@ class NullCheckInstruction extends Instruction {
 
 /// Type cast instruction.
 class CastInstruction extends Instruction {
-  final Value operand;
-  final String targetType;
-  final Variable result;
-  final bool isNullable;
-
   CastInstruction({
     required super.offset,
     required this.operand,
@@ -396,6 +391,11 @@ class CastInstruction extends Instruction {
     required this.result,
     this.isNullable = false,
   });
+
+  final Value operand;
+  final String targetType;
+  final Variable result;
+  final bool isNullable;
 
   @override
   String toString() {
@@ -406,11 +406,6 @@ class CastInstruction extends Instruction {
 
 /// Type check instruction (is/is!).
 class TypeCheckInstruction extends Instruction {
-  final Value operand;
-  final String targetType;
-  final Variable result;
-  final bool negated;
-
   TypeCheckInstruction({
     required super.offset,
     required this.operand,
@@ -418,6 +413,11 @@ class TypeCheckInstruction extends Instruction {
     required this.result,
     this.negated = false,
   });
+
+  final Value operand;
+  final String targetType;
+  final Variable result;
+  final bool negated;
 
   @override
   String toString() {
@@ -428,9 +428,9 @@ class TypeCheckInstruction extends Instruction {
 
 /// Throw instruction.
 class ThrowInstruction extends Instruction {
-  final Value exception;
-
   ThrowInstruction({required super.offset, required this.exception});
+
+  final Value exception;
 
   @override
   String toString() => 'throw $exception';
@@ -442,14 +442,14 @@ class ThrowInstruction extends Instruction {
 /// continuation point. The [future] operand is the value being awaited,
 /// and [result] receives the unwrapped value when the future completes.
 class AwaitInstruction extends Instruction {
-  final Value future;
-  final Variable result;
-
   AwaitInstruction({
     required super.offset,
     required this.future,
     required this.result,
   });
+
+  final Value future;
+  final Variable result;
 
   @override
   String toString() => '$result = await $future';
@@ -457,15 +457,15 @@ class AwaitInstruction extends Instruction {
 
 /// Control Flow Graph for a function.
 class ControlFlowGraph {
-  final String functionName;
-  final BasicBlock entry;
-  final List<BasicBlock> blocks;
-
   ControlFlowGraph({
     required this.functionName,
     required this.entry,
     required this.blocks,
   });
+
+  final String functionName;
+  final BasicBlock entry;
+  final List<BasicBlock> blocks;
 
   /// Returns blocks in reverse postorder (useful for dataflow analysis).
   List<BasicBlock> get reversePostOrder {

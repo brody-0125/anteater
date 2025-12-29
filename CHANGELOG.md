@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2025-12-29
+
+### Changed
+
+- **Halstead Metrics**: Renamed `N1`/`N2` fields to `operatorTotal`/`operandTotal` for Dart naming convention compliance
+- **SDK Version**: Updated minimum SDK constraint from `^3.5.0` to `^3.10.0` for `dart_bert_tokenizer` compatibility
+- **Async I/O**: Converted async file existence checks to sync versions for better performance
+
+### Fixed
+
+- **Library Documentation**: Added `library;` directive to fix dangling doc comment warning
+- **Doc Comments**: Escaped angle brackets in documentation to prevent unintended HTML interpretation
+- **String Interpolation**: Fixed string concatenation to use interpolation
+- **Const Usage**: Applied `const` constructors and declarations throughout test files
+- **Dynamic Calls**: Fixed avoid_dynamic_calls warnings in server tests
+- **Unnecessary Import**: Removed redundant import in metrics_test.dart
+- **Constructor Ordering**: Moved constructors before field declarations per `sort_constructors_first` lint rule
+
 ## [0.3.0] - 2025-12-29
 
 ### Added

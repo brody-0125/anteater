@@ -32,10 +32,10 @@ class NoEqualThenElseRule extends StyleRule {
 }
 
 class _NoEqualThenElseVisitor extends RecursiveAstVisitor<void> {
+  _NoEqualThenElseVisitor(this.lineInfo);
+
   final LineInfo lineInfo;
   final List<Violation> violations = [];
-
-  _NoEqualThenElseVisitor(this.lineInfo);
 
   @override
   void visitIfStatement(IfStatement node) {

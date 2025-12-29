@@ -15,12 +15,6 @@ import 'rules/quality/prefer_trailing_comma_rule.dart';
 /// Manages rule registration, lookup, and configuration.
 /// Provides access to all available rules and their enabled state.
 class RuleRegistry {
-  /// All registered rules indexed by ID.
-  final Map<String, StyleRule> _rules = {};
-
-  /// Rule settings indexed by rule ID.
-  final Map<String, RuleSettings> _settings = {};
-
   /// Creates an empty registry.
   RuleRegistry();
 
@@ -30,6 +24,12 @@ class RuleRegistry {
     registry.registerBuiltInRules();
     return registry;
   }
+
+  /// All registered rules indexed by ID.
+  final Map<String, StyleRule> _rules = {};
+
+  /// Rule settings indexed by rule ID.
+  final Map<String, RuleSettings> _settings = {};
 
   /// Registers a single rule.
   void register(StyleRule rule) {

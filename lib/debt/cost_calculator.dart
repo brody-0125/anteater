@@ -3,10 +3,10 @@ import 'debt_item.dart';
 
 /// Calculates the cost of technical debt items.
 class DebtCostCalculator {
-  final DebtCostConfig config;
-
   DebtCostCalculator({DebtCostConfig? config})
       : config = config ?? DebtCostConfig.defaults();
+
+  final DebtCostConfig config;
 
   /// Calculate cost for a single debt item.
   double calculateItemCost(DebtItem item) {
@@ -52,6 +52,15 @@ class DebtCostCalculator {
 
 /// Summary of calculated debt costs.
 class DebtSummary {
+  const DebtSummary({
+    required this.totalCost,
+    required this.costByType,
+    required this.costBySeverity,
+    required this.itemCount,
+    required this.unit,
+    required this.threshold,
+  });
+
   /// Total cost of all debt items.
   final double totalCost;
 
@@ -69,15 +78,6 @@ class DebtSummary {
 
   /// Threshold for alerts.
   final double threshold;
-
-  const DebtSummary({
-    required this.totalCost,
-    required this.costByType,
-    required this.costBySeverity,
-    required this.itemCount,
-    required this.unit,
-    required this.threshold,
-  });
 
   /// Whether the total cost exceeds the threshold.
   bool get exceedsThreshold => totalCost > threshold;
@@ -125,6 +125,12 @@ DebtSummary(
 
 /// Summary for a specific debt type.
 class DebtTypeSummary {
+  const DebtTypeSummary({
+    required this.type,
+    required this.count,
+    required this.cost,
+  });
+
   /// The debt type.
   final DebtType type;
 
@@ -133,12 +139,6 @@ class DebtTypeSummary {
 
   /// Total cost for this type.
   final double cost;
-
-  const DebtTypeSummary({
-    required this.type,
-    required this.count,
-    required this.cost,
-  });
 
   /// Convert to JSON map.
   Map<String, dynamic> toJson() => {

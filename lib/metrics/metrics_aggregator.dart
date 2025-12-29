@@ -12,6 +12,12 @@ import 'maintainability_index.dart';
 /// - Threshold-based violation detection
 /// - Summary reports
 class MetricsAggregator {
+  MetricsAggregator({
+    MaintainabilityIndexCalculator? calculator,
+    MetricsThresholds? thresholds,
+  })  : _calculator = calculator ?? MaintainabilityIndexCalculator(),
+        thresholds = thresholds ?? const MetricsThresholds();
+
   final MaintainabilityIndexCalculator _calculator;
 
   /// Metrics thresholds for violation detection.
@@ -22,12 +28,6 @@ class MetricsAggregator {
 
   /// Function metrics indexed by qualified name.
   final Map<String, FunctionMetrics> _functionMetrics = {};
-
-  MetricsAggregator({
-    MaintainabilityIndexCalculator? calculator,
-    MetricsThresholds? thresholds,
-  })  : _calculator = calculator ?? MaintainabilityIndexCalculator(),
-        thresholds = thresholds ?? const MetricsThresholds();
 
   /// Adds a file to the aggregation.
   void addFile(String path, CompilationUnit unit) {
@@ -65,7 +65,7 @@ class MetricsAggregator {
 
   /// Calculates project-wide statistics.
   ///
-  /// ADR-016 2.1: Use List<num> directly to avoid cast<num>() wrapper lists.
+  /// ADR-016 2.1: Use `List<num>` directly to avoid `cast<num>()` wrapper lists.
   ProjectMetrics getProjectMetrics() {
     if (_functionMetrics.isEmpty) {
       return ProjectMetrics.empty();
@@ -222,6 +222,13 @@ class MetricsAggregator {
 
 /// Metrics thresholds for violation detection.
 class MetricsThresholds {
+  const MetricsThresholds({
+    this.minMaintainability = 50.0,
+    this.maxCyclomatic = 20,
+    this.maxCognitive = 15,
+    this.maxLinesOfCode = 100,
+  });
+
   /// Minimum acceptable maintainability index.
   final double minMaintainability;
 
@@ -233,13 +240,6 @@ class MetricsThresholds {
 
   /// Maximum acceptable lines of code per function.
   final int maxLinesOfCode;
-
-  const MetricsThresholds({
-    this.minMaintainability = 50.0,
-    this.maxCyclomatic = 20,
-    this.maxCognitive = 15,
-    this.maxLinesOfCode = 100,
-  });
 
   @override
   String toString() => '''
@@ -253,15 +253,15 @@ MetricsThresholds(
 
 /// Metrics for a single function with file context.
 class FunctionMetrics {
-  final String filePath;
-  final String functionName;
-  final MaintainabilityResult result;
-
   const FunctionMetrics({
     required this.filePath,
     required this.functionName,
     required this.result,
   });
+
+  final String filePath;
+  final String functionName;
+  final MaintainabilityResult result;
 
   String get qualifiedName => '$filePath::$functionName';
 
@@ -272,15 +272,15 @@ class FunctionMetrics {
 
 /// Summary of metrics for a file.
 class FileMetricsSummary {
-  final String path;
-  final FileMaintainabilityResult result;
-  final int functionCount;
-
   const FileMetricsSummary({
     required this.path,
     required this.result,
     required this.functionCount,
   });
+
+  final String path;
+  final FileMaintainabilityResult result;
+  final int functionCount;
 
   @override
   String toString() =>
@@ -289,14 +289,6 @@ class FileMetricsSummary {
 
 /// Statistical summary for a metric.
 class MetricStats {
-  final double min;
-  final double max;
-  final double mean;
-  final double median;
-  final double stdDev;
-  final double p90;
-  final double p95;
-
   const MetricStats({
     required this.min,
     required this.max,
@@ -317,6 +309,14 @@ class MetricStats {
         p95: 0,
       );
 
+  final double min;
+  final double max;
+  final double mean;
+  final double median;
+  final double stdDev;
+  final double p90;
+  final double p95;
+
   @override
   String toString() =>
       'MetricStats(min=${min.toStringAsFixed(1)}, max=${max.toStringAsFixed(1)}, mean=${mean.toStringAsFixed(1)}, median=${median.toStringAsFixed(1)})';
@@ -324,15 +324,6 @@ class MetricStats {
 
 /// Project-wide metrics summary.
 class ProjectMetrics {
-  final int fileCount;
-  final int functionCount;
-  final int totalLinesOfCode;
-  final MetricStats maintainabilityIndex;
-  final MetricStats cyclomaticComplexity;
-  final MetricStats cognitiveComplexity;
-  final MetricStats linesOfCode;
-  final double totalHalsteadVolume;
-
   const ProjectMetrics({
     required this.fileCount,
     required this.functionCount,
@@ -355,6 +346,15 @@ class ProjectMetrics {
         totalHalsteadVolume: 0,
       );
 
+  final int fileCount;
+  final int functionCount;
+  final int totalLinesOfCode;
+  final MetricStats maintainabilityIndex;
+  final MetricStats cyclomaticComplexity;
+  final MetricStats cognitiveComplexity;
+  final MetricStats linesOfCode;
+  final double totalHalsteadVolume;
+
   @override
   String toString() => '''
 ProjectMetrics(
@@ -369,17 +369,17 @@ ProjectMetrics(
 
 /// Distribution of maintainability ratings.
 class RatingDistribution {
-  final int good;
-  final int moderate;
-  final int poor;
-  final int total;
-
   const RatingDistribution({
     required this.good,
     required this.moderate,
     required this.poor,
     required this.total,
   });
+
+  final int good;
+  final int moderate;
+  final int poor;
+  final int total;
 
   double get goodPercent => total > 0 ? (good / total) * 100 : 0;
   double get moderatePercent => total > 0 ? (moderate / total) * 100 : 0;
@@ -396,13 +396,6 @@ RatingDistribution(
 
 /// Comprehensive aggregated report.
 class AggregatedReport {
-  final ProjectMetrics projectMetrics;
-  final RatingDistribution ratingDistribution;
-  final List<FunctionMetrics> violations;
-  final List<FunctionMetrics> worstFunctions;
-  final List<FileMetricsSummary> filesSummary;
-  final MetricsThresholds thresholds;
-
   const AggregatedReport({
     required this.projectMetrics,
     required this.ratingDistribution,
@@ -411,6 +404,13 @@ class AggregatedReport {
     required this.filesSummary,
     required this.thresholds,
   });
+
+  final ProjectMetrics projectMetrics;
+  final RatingDistribution ratingDistribution;
+  final List<FunctionMetrics> violations;
+  final List<FunctionMetrics> worstFunctions;
+  final List<FileMetricsSummary> filesSummary;
+  final MetricsThresholds thresholds;
 
   /// Whether the project has any threshold violations.
   bool get hasViolations => violations.isNotEmpty;

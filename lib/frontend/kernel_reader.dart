@@ -27,59 +27,59 @@ class KernelReader {
 
 /// Represents a parsed Kernel program.
 class KernelProgram {
-  final List<KernelLibrary> libraries;
-
   KernelProgram({required this.libraries});
+
+  final List<KernelLibrary> libraries;
 }
 
 /// Represents a library in Kernel format.
 class KernelLibrary {
-  final String uri;
-  final List<KernelClass> classes;
-  final List<KernelProcedure> procedures;
-
   KernelLibrary({
     required this.uri,
     this.classes = const [],
     this.procedures = const [],
   });
+
+  final String uri;
+  final List<KernelClass> classes;
+  final List<KernelProcedure> procedures;
 }
 
 /// Represents a class in Kernel format.
 class KernelClass {
-  final String name;
-  final List<KernelProcedure> procedures;
-  final List<KernelField> fields;
-
   KernelClass({
     required this.name,
     this.procedures = const [],
     this.fields = const [],
   });
+
+  final String name;
+  final List<KernelProcedure> procedures;
+  final List<KernelField> fields;
 }
 
 /// Represents a procedure (method/function) in Kernel format.
 class KernelProcedure {
-  final String name;
-  final bool isStatic;
-  final bool isAbstract;
-
   KernelProcedure({
     required this.name,
     this.isStatic = false,
     this.isAbstract = false,
   });
+
+  final String name;
+  final bool isStatic;
+  final bool isAbstract;
 }
 
 /// Represents a field in Kernel format.
 class KernelField {
-  final String name;
-  final bool isFinal;
-  final bool isStatic;
-
   KernelField({
     required this.name,
     this.isFinal = false,
     this.isStatic = false,
   });
+
+  final String name;
+  final bool isFinal;
+  final bool isStatic;
 }

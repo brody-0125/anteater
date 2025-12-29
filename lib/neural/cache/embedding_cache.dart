@@ -12,6 +12,12 @@ import '../inference/onnx_runtime.dart';
 /// - LRU eviction when cache exceeds size limit
 /// - Fast similarity search across all cached embeddings
 class EmbeddingCache {
+  EmbeddingCache({
+    required String cachePath,
+    int maxEntries = 10000,
+  })  : _cachePath = cachePath,
+        _maxEntries = maxEntries;
+
   final String _cachePath;
   final int _maxEntries;
 
@@ -19,12 +25,6 @@ class EmbeddingCache {
   /// Uses LinkedHashMap for O(1) LRU operations (ADR-016 1.1).
   /// Insertion order is maintained, so oldest entries are at the front.
   final LinkedHashMap<String, _CacheEntry> _cache = LinkedHashMap();
-
-  EmbeddingCache({
-    required String cachePath,
-    int maxEntries = 10000,
-  })  : _cachePath = cachePath,
-        _maxEntries = maxEntries;
 
   /// Number of cached entries.
   int get size => _cache.length;
@@ -41,7 +41,7 @@ class EmbeddingCache {
   /// Loads cache from disk if it exists.
   Future<void> load() async {
     final file = File(_cachePath);
-    if (!await file.exists()) return;
+    if (!file.existsSync()) return;
 
     try {
       final content = await file.readAsString();
@@ -67,8 +67,8 @@ class EmbeddingCache {
     final file = File(_cachePath);
     final dir = file.parent;
 
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
+    if (!dir.existsSync()) {
+      dir.createSync(recursive: true);
     }
 
     final entries = _cache.entries.map((e) => e.value.toJson(e.key)).toList();
@@ -200,9 +200,6 @@ class EmbeddingCache {
 
 /// A cached embedding entry.
 class _CacheEntry {
-  final String contentHash;
-  final List<double> embedding;
-
   _CacheEntry({
     required this.contentHash,
     required this.embedding,
@@ -217,6 +214,9 @@ class _CacheEntry {
     );
   }
 
+  final String contentHash;
+  final List<double> embedding;
+
   Map<String, dynamic> toJson(String id) {
     return {
       'id': id,
@@ -228,13 +228,13 @@ class _CacheEntry {
 
 /// Result of a similarity search.
 class SimilarityResult {
-  final String functionId;
-  final double similarity;
-
   const SimilarityResult({
     required this.functionId,
     required this.similarity,
   });
+
+  final String functionId;
+  final double similarity;
 
   @override
   String toString() =>
@@ -243,15 +243,15 @@ class SimilarityResult {
 
 /// Cache statistics.
 class CacheStats {
-  final int entryCount;
-  final int maxEntries;
-  final int embeddingDimensions;
-
   const CacheStats({
     required this.entryCount,
     required this.maxEntries,
     required this.embeddingDimensions,
   });
+
+  final int entryCount;
+  final int maxEntries;
+  final int embeddingDimensions;
 
   double get utilizationPercent => entryCount / maxEntries * 100;
 

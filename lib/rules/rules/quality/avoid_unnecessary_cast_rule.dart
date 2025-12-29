@@ -32,10 +32,10 @@ class AvoidUnnecessaryCastRule extends StyleRule {
 }
 
 class _AvoidUnnecessaryCastVisitor extends RecursiveAstVisitor<void> {
+  _AvoidUnnecessaryCastVisitor(this.lineInfo);
+
   final LineInfo lineInfo;
   final List<Violation> violations = [];
-
-  _AvoidUnnecessaryCastVisitor(this.lineInfo);
 
   @override
   void visitAsExpression(AsExpression node) {

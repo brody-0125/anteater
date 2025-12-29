@@ -10,10 +10,10 @@ import 'debt_item.dart';
 
 /// Detects technical debt items in Dart source code.
 class DebtDetector {
-  final DebtCostConfig config;
-
   DebtDetector({DebtCostConfig? config})
       : config = config ?? DebtCostConfig.defaults();
+
+  final DebtCostConfig config;
 
   /// Detect all debt items in a compilation unit.
   ///
@@ -233,11 +233,11 @@ class DebtDetector {
 
 /// Visitor to detect `as dynamic` casts.
 class _CastDebtVisitor extends RecursiveAstVisitor<void> {
+  _CastDebtVisitor(this.filePath, this.lineInfo);
+
   final String filePath;
   final LineInfo lineInfo;
   final List<DebtItem> items = [];
-
-  _CastDebtVisitor(this.filePath, this.lineInfo);
 
   @override
   void visitAsExpression(AsExpression node) {
@@ -276,11 +276,11 @@ class _CastDebtVisitor extends RecursiveAstVisitor<void> {
 
 /// Visitor to detect @deprecated usage.
 class _AnnotationDebtVisitor extends RecursiveAstVisitor<void> {
+  _AnnotationDebtVisitor(this.filePath, this.lineInfo);
+
   final String filePath;
   final LineInfo lineInfo;
   final List<DebtItem> items = [];
-
-  _AnnotationDebtVisitor(this.filePath, this.lineInfo);
 
   @override
   void visitAnnotation(Annotation node) {

@@ -10,13 +10,13 @@ import 'debt_report.dart';
 
 /// Aggregates technical debt across multiple files.
 class DebtAggregator {
-  final DebtDetector _detector;
-  final DebtCostCalculator _calculator;
-  final Map<String, List<DebtItem>> _fileDebt = {};
-
   DebtAggregator({DebtCostConfig? config})
       : _detector = DebtDetector(config: config),
         _calculator = DebtCostCalculator(config: config);
+
+  final DebtDetector _detector;
+  final DebtCostCalculator _calculator;
+  final Map<String, List<DebtItem>> _fileDebt = {};
 
   /// Add a file to the aggregation.
   void addFile(
@@ -125,6 +125,14 @@ class DebtAggregator {
 
 /// Represents the trend in technical debt over time.
 class DebtTrend {
+  const DebtTrend({
+    required this.previousTotal,
+    required this.currentTotal,
+    required this.previousItemCount,
+    required this.currentItemCount,
+    required this.unit,
+  });
+
   /// Previous total cost.
   final double previousTotal;
 
@@ -139,14 +147,6 @@ class DebtTrend {
 
   /// Unit of measurement.
   final String unit;
-
-  const DebtTrend({
-    required this.previousTotal,
-    required this.currentTotal,
-    required this.previousItemCount,
-    required this.currentItemCount,
-    required this.unit,
-  });
 
   /// Change in total cost.
   double get costChange => currentTotal - previousTotal;

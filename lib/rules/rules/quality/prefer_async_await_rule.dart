@@ -32,10 +32,10 @@ class PreferAsyncAwaitRule extends StyleRule {
 }
 
 class _PreferAsyncAwaitVisitor extends RecursiveAstVisitor<void> {
+  _PreferAsyncAwaitVisitor(this.lineInfo);
+
   final LineInfo lineInfo;
   final List<Violation> violations = [];
-
-  _PreferAsyncAwaitVisitor(this.lineInfo);
 
   @override
   void visitMethodInvocation(MethodInvocation node) {

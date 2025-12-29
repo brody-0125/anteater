@@ -93,7 +93,7 @@ class CfgBuilder {
         final value = _evaluateExpression(initializer.expression);
         _addInstruction(StoreFieldInstruction(
           offset: initializer.offset,
-          base: VariableValue(Variable('this')),
+          base: const VariableValue(Variable('this')),
           fieldName: initializer.fieldName.name,
           value: value,
         ));
@@ -106,7 +106,7 @@ class CfgBuilder {
         final methodName = initializer.constructorName?.name ?? '<super>';
         _addInstruction(CallInstruction(
           offset: initializer.offset,
-          receiver: VariableValue(Variable('super')),
+          receiver: const VariableValue(Variable('super')),
           methodName: methodName,
           arguments: arguments,
         ));
@@ -119,7 +119,7 @@ class CfgBuilder {
         final methodName = initializer.constructorName?.name ?? '<this>';
         _addInstruction(CallInstruction(
           offset: initializer.offset,
-          receiver: VariableValue(Variable('this')),
+          receiver: const VariableValue(Variable('this')),
           methodName: methodName,
           arguments: arguments,
         ));
@@ -698,7 +698,7 @@ class CfgBuilder {
     _currentBlock = assertFail;
     _addInstruction(ThrowInstruction(
       offset: statement.offset,
-      exception: NewObjectValue(
+      exception: const NewObjectValue(
         typeName: 'AssertionError',
         arguments: [],
       ),
@@ -722,7 +722,7 @@ class CfgBuilder {
       case StringLiteral():
         return ConstantValue(expression.stringValue);
       case NullLiteral():
-        return ConstantValue(null);
+        return const ConstantValue(null);
       case SimpleIdentifier():
         return VariableValue(Variable(expression.name));
       case PrefixedIdentifier():
@@ -762,7 +762,7 @@ class CfgBuilder {
         return _evaluateTypeCheck(expression);
       case ThrowExpression():
         _visitThrowExpression(expression);
-        return ConstantValue(null); // Never reached
+        return const ConstantValue(null); // Never reached
       case AwaitExpression():
         return _evaluateAwait(expression);
       case CascadeExpression():
@@ -823,7 +823,7 @@ class CfgBuilder {
     _addInstruction(AssignInstruction(
       offset: expression.offset,
       target: result,
-      value: ConstantValue(false),
+      value: const ConstantValue(false),
     ));
     _addInstruction(JumpInstruction(offset: expression.offset, target: mergeBlock));
     _currentBlock!.connectTo(mergeBlock);
@@ -854,7 +854,7 @@ class CfgBuilder {
     _addInstruction(AssignInstruction(
       offset: expression.offset,
       target: result,
-      value: ConstantValue(true),
+      value: const ConstantValue(true),
     ));
     _addInstruction(JumpInstruction(offset: expression.offset, target: mergeBlock));
     _currentBlock!.connectTo(mergeBlock);
@@ -893,7 +893,7 @@ class CfgBuilder {
     _addInstruction(AssignInstruction(
       offset: expression.offset,
       target: isNull,
-      value: BinaryOpValue('==', VariableValue(leftTemp), ConstantValue(null)),
+      value: BinaryOpValue('==', VariableValue(leftTemp), const ConstantValue(null)),
     ));
     _addInstruction(BranchInstruction(
       offset: expression.offset,
@@ -941,7 +941,7 @@ class CfgBuilder {
         final newValue = BinaryOpValue(
           op == '++' ? '+' : '-',
           operand,
-          ConstantValue(1),
+          const ConstantValue(1),
         );
         _addInstruction(AssignInstruction(
           offset: expression.offset,
@@ -982,7 +982,7 @@ class CfgBuilder {
       final newValue = BinaryOpValue(
         op == '++' ? '+' : '-',
         operand,
-        ConstantValue(1),
+        const ConstantValue(1),
       );
       _addInstruction(AssignInstruction(
         offset: expression.offset,
@@ -1121,7 +1121,7 @@ class CfgBuilder {
     _addInstruction(AssignInstruction(
       offset: expression.offset,
       target: isNull,
-      value: BinaryOpValue('==', VariableValue(receiverTemp), ConstantValue(null)),
+      value: BinaryOpValue('==', VariableValue(receiverTemp), const ConstantValue(null)),
     ));
     _addInstruction(BranchInstruction(
       offset: expression.offset,
@@ -1137,7 +1137,7 @@ class CfgBuilder {
     _addInstruction(AssignInstruction(
       offset: expression.offset,
       target: result,
-      value: ConstantValue(null),
+      value: const ConstantValue(null),
     ));
     _addInstruction(JumpInstruction(offset: expression.offset, target: mergeBlock));
     _currentBlock!.connectTo(mergeBlock);
@@ -1218,7 +1218,7 @@ class CfgBuilder {
       if (e is Expression) {
         return _evaluateExpression(e);
       }
-      return ConstantValue('<spread>');
+      return const ConstantValue('<spread>');
     }).toList();
 
     final result = _createTemp();

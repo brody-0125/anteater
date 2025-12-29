@@ -129,19 +129,19 @@ class FactExtractor {
         // Constants don't create heap objects (primitives)
         break;
 
-      case VariableValue(variable: var v):
+      case VariableValue(variable: final v):
         // Variable copy: Assign(target, source)
         final sourceId = getVarId(v.name);
         facts.add(Fact('Assign', [targetId, sourceId]));
 
-      case NewObjectValue(typeName: var type):
+      case NewObjectValue(typeName: final type):
         // Object allocation: Assign(var, expr) + Alloc(expr, heap)
         final exprId = instr.offset; // Use offset as expression ID
         final heapId = getHeapId(type, instr.offset);
         facts.add(Fact('Assign', [targetId, exprId]));
         facts.add(Fact('Alloc', [exprId, heapId]));
 
-      case CallValue(methodName: var method, :var receiver):
+      case CallValue(methodName: final method, :final receiver):
         // Method call result assignment
         final callSite = _callSiteCounter++;
         if (receiver != null) {
@@ -155,14 +155,14 @@ class FactExtractor {
         facts.add(Fact('Assign', [targetId, instr.offset]));
         facts.add(Fact('Alloc', [instr.offset, heapId]));
 
-      case FieldAccessValue(receiver: var recv, fieldName: var field):
+      case FieldAccessValue(receiver: final recv, fieldName: final field):
         // Field access creates LoadField
         final baseId = _getValueVarId(recv);
         if (baseId != null) {
           facts.add(Fact('LoadField', [baseId, field, targetId]));
         }
 
-      case IndexAccessValue(receiver: var recv):
+      case IndexAccessValue(receiver: final recv):
         // Index access creates LoadField with special field name
         final baseId = _getValueVarId(recv);
         if (baseId != null) {
@@ -294,13 +294,13 @@ class FactExtractor {
 
 /// Helper class to manage fact extraction context.
 class ExtractionContext {
-  final String fileName;
-  final String functionName;
-  final FactExtractor extractor;
-
   ExtractionContext({
     required this.fileName,
     required this.functionName,
     required this.extractor,
   });
+
+  final String fileName;
+  final String functionName;
+  final FactExtractor extractor;
 }
