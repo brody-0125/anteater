@@ -9,15 +9,6 @@ import 'rule_registry.dart';
 ///
 /// Parses YAML configuration and provides rule settings.
 class RuleConfig {
-  /// Global file patterns to exclude from all rules.
-  final List<String> excludePatterns;
-
-  /// Rule-specific settings.
-  final Map<String, RuleSettings> ruleSettings;
-
-  /// Metrics thresholds for rule integration.
-  final MetricsThresholds metrics;
-
   const RuleConfig({
     this.excludePatterns = const [],
     this.ruleSettings = const {},
@@ -83,10 +74,19 @@ class RuleConfig {
     );
   }
 
+  /// Global file patterns to exclude from all rules.
+  final List<String> excludePatterns;
+
+  /// Rule-specific settings.
+  final Map<String, RuleSettings> ruleSettings;
+
+  /// Metrics thresholds for rule integration.
+  final MetricsThresholds metrics;
+
   /// Loads configuration from a file.
   static Future<RuleConfig> loadFromFile(String path) async {
     final file = File(path);
-    if (!await file.exists()) {
+    if (!file.existsSync()) {
       return RuleConfig.defaults();
     }
 
@@ -186,30 +186,6 @@ class RuleConfig {
 
 /// Metrics thresholds for rule integration.
 class MetricsThresholds {
-  /// Maximum cyclomatic complexity.
-  final int cyclomaticComplexity;
-
-  /// Maximum cognitive complexity.
-  final int cognitiveComplexity;
-
-  /// Maximum source lines of code per function.
-  final int sourceLinesOfCode;
-
-  /// Minimum maintainability index.
-  final int maintainabilityIndex;
-
-  /// Maximum nesting level.
-  final int maximumNesting;
-
-  /// Maximum number of parameters.
-  final int numberOfParameters;
-
-  /// Maximum number of methods per class.
-  final int numberOfMethods;
-
-  /// Maximum Halstead volume.
-  final int halsteadVolume;
-
   const MetricsThresholds({
     this.cyclomaticComplexity = 20,
     this.cognitiveComplexity = 15,
@@ -239,6 +215,30 @@ class MetricsThresholds {
       halsteadVolume: _parseInt(map['halstead-volume'], defaultValue: 150),
     );
   }
+
+  /// Maximum cyclomatic complexity.
+  final int cyclomaticComplexity;
+
+  /// Maximum cognitive complexity.
+  final int cognitiveComplexity;
+
+  /// Maximum source lines of code per function.
+  final int sourceLinesOfCode;
+
+  /// Minimum maintainability index.
+  final int maintainabilityIndex;
+
+  /// Maximum nesting level.
+  final int maximumNesting;
+
+  /// Maximum number of parameters.
+  final int numberOfParameters;
+
+  /// Maximum number of methods per class.
+  final int numberOfMethods;
+
+  /// Maximum Halstead volume.
+  final int halsteadVolume;
 
   static int _parseInt(dynamic value, {required int defaultValue}) {
     if (value is int) return value;

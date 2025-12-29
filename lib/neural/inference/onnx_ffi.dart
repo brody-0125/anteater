@@ -171,6 +171,8 @@ abstract class OrtLoggingLevel {
 /// This class provides low-level FFI access to the ONNX Runtime C API.
 /// For high-level usage, see [OnnxRuntime] in onnx_runtime.dart.
 class OnnxFfi {
+  OnnxFfi._(this._lib);
+
   final DynamicLibrary _lib;
 
   late final OrtGetApiBaseDart getApiBase;
@@ -185,8 +187,6 @@ class OnnxFfi {
   late final OrtReleaseValueDart releaseValue;
   late final OrtReleaseStatusDart releaseStatus;
   late final OrtGetErrorMessageDart getErrorMessage;
-
-  OnnxFfi._(this._lib);
 
   /// Loads the ONNX Runtime library from the specified path.
   ///
@@ -286,9 +286,9 @@ class OnnxFfi {
 
 /// Exception thrown when ONNX Runtime library cannot be loaded.
 class OnnxLoadException implements Exception {
-  final String message;
-
   OnnxLoadException(this.message);
+
+  final String message;
 
   @override
   String toString() => 'OnnxLoadException: $message';
@@ -296,9 +296,9 @@ class OnnxLoadException implements Exception {
 
 /// Exception thrown during ONNX Runtime operations.
 class OnnxRuntimeException implements Exception {
-  final String message;
-
   OnnxRuntimeException(this.message);
+
+  final String message;
 
   @override
   String toString() => 'OnnxRuntimeException: $message';
@@ -306,10 +306,6 @@ class OnnxRuntimeException implements Exception {
 
 /// Helper class for managing ONNX tensor memory.
 class OnnxTensor {
-  final Pointer<Float> data;
-  final List<int> shape;
-  final int elementCount;
-
   OnnxTensor._({
     required this.data,
     required this.shape,
@@ -351,6 +347,10 @@ class OnnxTensor {
       elementCount: inputIds.length,
     );
   }
+
+  final Pointer<Float> data;
+  final List<int> shape;
+  final int elementCount;
 
   /// Extracts data as a list of doubles.
   List<double> toList() {

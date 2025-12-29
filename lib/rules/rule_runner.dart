@@ -8,6 +8,12 @@ import 'rule_registry.dart';
 ///
 /// Coordinates rule execution, violation collection, and file filtering.
 class RuleRunner {
+  /// Creates a rule runner with the given registry.
+  RuleRunner({
+    required this.registry,
+    this.excludePatterns = const [],
+  });
+
   /// Rule registry containing all registered rules.
   final RuleRegistry registry;
 
@@ -16,12 +22,6 @@ class RuleRunner {
 
   /// Cache for compiled glob patterns to avoid repeated RegExp compilation.
   final Map<String, RegExp> _patternCache = {};
-
-  /// Creates a rule runner with the given registry.
-  RuleRunner({
-    required this.registry,
-    this.excludePatterns = const [],
-  });
 
   /// Runs all enabled rules on a compilation unit.
   ///
@@ -193,6 +193,17 @@ class RuleRunner {
 
 /// Result of running rules on multiple files.
 class AnalysisResult {
+  AnalysisResult({
+    required this.violationsByFile,
+    required this.filesAnalyzed,
+  });
+
+  /// Creates an empty result.
+  factory AnalysisResult.empty() => AnalysisResult(
+        violationsByFile: const {},
+        filesAnalyzed: 0,
+      );
+
   /// Violations grouped by file path.
   final Map<String, List<Violation>> violationsByFile;
 
@@ -211,17 +222,6 @@ class AnalysisResult {
 
   /// Files with violations.
   Iterable<String> get filesWithViolations => violationsByFile.keys;
-
-  AnalysisResult({
-    required this.violationsByFile,
-    required this.filesAnalyzed,
-  });
-
-  /// Creates an empty result.
-  factory AnalysisResult.empty() => AnalysisResult(
-        violationsByFile: const {},
-        filesAnalyzed: 0,
-      );
 
   Map<RuleSeverity, int> _computeSeverityCounts() {
     final counts = <RuleSeverity, int>{};

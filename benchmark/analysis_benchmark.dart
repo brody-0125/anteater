@@ -60,7 +60,7 @@ Future<void> runBenchmarks(int iterations) async {
   print('\nBenchmark: Metrics Aggregation (50 files)');
   await benchmarkAggregation(50, iterations ~/ 10);
 
-  print('\n' + '=' * 50);
+  print('\n${'=' * 50}');
   print('Benchmarks completed');
 }
 

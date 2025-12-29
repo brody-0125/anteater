@@ -32,10 +32,10 @@ class BinaryExpressionOrderRule extends StyleRule {
 }
 
 class _BinaryExpressionOrderVisitor extends RecursiveAstVisitor<void> {
+  _BinaryExpressionOrderVisitor(this.lineInfo);
+
   final LineInfo lineInfo;
   final List<Violation> violations = [];
-
-  _BinaryExpressionOrderVisitor(this.lineInfo);
 
   /// Operators where order matters for readability.
   static const _comparisonOperators = {'==', '!=', '<', '>', '<=', '>='};

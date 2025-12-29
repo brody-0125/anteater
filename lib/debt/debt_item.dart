@@ -32,13 +32,13 @@ enum DebtType {
   /// Duplicate or similar code detected.
   duplicateCode('duplicate code', DebtSeverity.medium);
 
+  const DebtType(this.label, this.defaultSeverity);
+
   /// Human-readable label.
   final String label;
 
   /// Default severity for this debt type.
   final DebtSeverity defaultSeverity;
-
-  const DebtType(this.label, this.defaultSeverity);
 }
 
 /// Severity level for technical debt.
@@ -55,17 +55,27 @@ enum DebtSeverity {
   /// Low priority issues.
   low(0.5, 'Low');
 
+  const DebtSeverity(this.multiplier, this.label);
+
   /// Cost multiplier for this severity.
   final double multiplier;
 
   /// Human-readable label.
   final String label;
-
-  const DebtSeverity(this.multiplier, this.label);
 }
 
 /// Represents a single technical debt item.
 class DebtItem {
+  DebtItem({
+    required this.type,
+    required this.description,
+    required this.location,
+    required this.filePath,
+    this.context,
+    DebtSeverity? severity,
+    this.sourceCode,
+  }) : severity = severity ?? type.defaultSeverity;
+
   /// Type of debt.
   final DebtType type;
 
@@ -86,16 +96,6 @@ class DebtItem {
 
   /// Original source code snippet.
   final String? sourceCode;
-
-  DebtItem({
-    required this.type,
-    required this.description,
-    required this.location,
-    required this.filePath,
-    this.context,
-    DebtSeverity? severity,
-    this.sourceCode,
-  }) : severity = severity ?? type.defaultSeverity;
 
   @override
   String toString() =>

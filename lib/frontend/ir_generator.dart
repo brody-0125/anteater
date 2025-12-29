@@ -8,6 +8,15 @@ import 'source_loader.dart';
 
 /// Represents the IR for a single function/method.
 class FunctionIr {
+  FunctionIr({
+    required this.name,
+    required this.cfg,
+    required this.parameters,
+    required this.filePath,
+    required this.offset,
+    required this.endOffset,
+  });
+
   /// Fully qualified name (e.g., "MyClass.myMethod" or "topLevelFunction").
   final String name;
 
@@ -26,30 +35,21 @@ class FunctionIr {
   /// End offset in source.
   final int endOffset;
 
-  FunctionIr({
-    required this.name,
-    required this.cfg,
-    required this.parameters,
-    required this.filePath,
-    required this.offset,
-    required this.endOffset,
-  });
-
   @override
   String toString() => 'FunctionIr($name)';
 }
 
 /// Represents the IR for an entire file.
 class FileIr {
-  final String filePath;
-  final List<FunctionIr> functions;
-  final List<ClassIr> classes;
-
   FileIr({
     required this.filePath,
     required this.functions,
     required this.classes,
   });
+
+  final String filePath;
+  final List<FunctionIr> functions;
+  final List<ClassIr> classes;
 
   /// All function IRs including those inside classes.
   Iterable<FunctionIr> get allFunctions sync* {
@@ -62,40 +62,40 @@ class FileIr {
 
 /// Represents the IR for a class.
 class ClassIr {
-  final String name;
-  final List<FunctionIr> methods;
-  final List<FieldInfo> fields;
-
   ClassIr({
     required this.name,
     required this.methods,
     required this.fields,
   });
+
+  final String name;
+  final List<FunctionIr> methods;
+  final List<FieldInfo> fields;
 }
 
 /// Information about a class field.
 class FieldInfo {
-  final String name;
-  final String? typeName;
-  final bool isFinal;
-  final bool isStatic;
-
   FieldInfo({
     required this.name,
     this.typeName,
     this.isFinal = false,
     this.isStatic = false,
   });
+
+  final String name;
+  final String? typeName;
+  final bool isFinal;
+  final bool isStatic;
 }
 
 /// Generates IR from Dart source files.
 ///
 /// Pipeline: SourceLoader → AST → CFG → SSA
 class IrGenerator {
+  IrGenerator(this._loader);
+
   final SourceLoader _loader;
   final CfgBuilder _cfgBuilder = CfgBuilder();
-
-  IrGenerator(this._loader);
 
   /// Analyzes a single file and returns its IR.
   Future<FileIr?> analyzeFile(String filePath) async {

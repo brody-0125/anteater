@@ -157,6 +157,15 @@ class CodeActionsProvider {
 
 /// A code action that can be applied to fix or refactor code.
 class CodeAction {
+  const CodeAction({
+    required this.title,
+    required this.kind,
+    this.diagnostic,
+    this.isPreferred = false,
+    this.edits,
+    this.command,
+  });
+
   /// The display title for this action.
   final String title;
 
@@ -175,15 +184,6 @@ class CodeAction {
   /// Optional command to execute.
   final CodeCommand? command;
 
-  const CodeAction({
-    required this.title,
-    required this.kind,
-    this.diagnostic,
-    this.isPreferred = false,
-    this.edits,
-    this.command,
-  });
-
   Map<String, dynamic> toJson() => {
         'title': title,
         'kind': kind.value,
@@ -196,9 +196,9 @@ class CodeAction {
 
 /// Kinds of code actions.
 class CodeActionKind {
-  final String value;
-
   const CodeActionKind._(this.value);
+
+  final String value;
 
   static const quickfix = CodeActionKind._('quickfix');
   static const refactor = CodeActionKind._('refactor');
@@ -215,10 +215,10 @@ class CodeActionKind {
 
 /// A text edit to apply to a document.
 class TextEdit {
+  const TextEdit({required this.range, required this.newText});
+
   final Range range;
   final String newText;
-
-  const TextEdit({required this.range, required this.newText});
 
   Map<String, dynamic> toJson() => {
         'range': range.toJson(),
@@ -228,15 +228,15 @@ class TextEdit {
 
 /// A command to execute.
 class CodeCommand {
-  final String title;
-  final String command;
-  final List<dynamic>? arguments;
-
   const CodeCommand({
     required this.title,
     required this.command,
     this.arguments,
   });
+
+  final String title;
+  final String command;
+  final List<dynamic>? arguments;
 
   Map<String, dynamic> toJson() => {
         'title': title,

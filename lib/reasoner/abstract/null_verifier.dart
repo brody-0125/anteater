@@ -3,6 +3,14 @@ import 'abstract_domain.dart';
 
 /// Represents a potential null dereference location.
 class NullDereference {
+  NullDereference({
+    required this.blockId,
+    required this.offset,
+    required this.variable,
+    required this.type,
+    required this.instruction,
+  });
+
   /// Block ID where the dereference occurs.
   final int blockId;
 
@@ -17,14 +25,6 @@ class NullDereference {
 
   /// The instruction performing the dereference.
   final Instruction instruction;
-
-  NullDereference({
-    required this.blockId,
-    required this.offset,
-    required this.variable,
-    required this.type,
-    required this.instruction,
-  });
 
   @override
   String toString() =>
@@ -41,6 +41,14 @@ enum DereferenceType {
 
 /// Result of null safety verification for a single dereference.
 class NullCheckResult {
+  NullCheckResult({
+    required this.dereference,
+    required this.isSafe,
+    required this.isDefinitelyNull,
+    this.nullability,
+    required this.reason,
+  });
+
   /// The dereference being checked.
   final NullDereference dereference;
 
@@ -55,14 +63,6 @@ class NullCheckResult {
 
   /// Human-readable reason for the result.
   final String reason;
-
-  NullCheckResult({
-    required this.dereference,
-    required this.isSafe,
-    required this.isDefinitelyNull,
-    this.nullability,
-    required this.reason,
-  });
 
   /// Unknown: neither provably safe nor definitely null.
   bool get isUnknown => !isSafe && !isDefinitelyNull;
@@ -119,7 +119,7 @@ class NullVerifier {
 
   /// Performs nullability analysis on the CFG.
   void _analyzeNullability(ControlFlowGraph cfg) {
-    final defaultValue = NullabilityDomain.topValue;
+    const defaultValue = NullabilityDomain.topValue;
 
     // Initialize all blocks
     for (final block in cfg.blocks) {
@@ -415,7 +415,7 @@ class NullVerifier {
           type: DereferenceType.methodCall,
           instruction: AssignInstruction(
             offset: offset,
-            target: Variable('_dummy'),
+            target: const Variable('_dummy'),
             value: value,
           ),
         ));
@@ -432,7 +432,7 @@ class NullVerifier {
           type: DereferenceType.fieldAccess,
           instruction: AssignInstruction(
             offset: offset,
-            target: Variable('_dummy'),
+            target: const Variable('_dummy'),
             value: value,
           ),
         ));
@@ -449,7 +449,7 @@ class NullVerifier {
           type: DereferenceType.indexAccess,
           instruction: AssignInstruction(
             offset: offset,
-            target: Variable('_dummy'),
+            target: const Variable('_dummy'),
             value: value,
           ),
         ));
@@ -522,13 +522,13 @@ class NullVerifier {
 
 /// Summary of null safety verification results.
 class NullSafetySummary {
-  final String functionName;
-  final List<NullCheckResult> results;
-
   NullSafetySummary({
     required this.functionName,
     required this.results,
   });
+
+  final String functionName;
+  final List<NullCheckResult> results;
 
   /// Number of provably safe dereferences.
   int get safeCount => results.where((r) => r.isSafe).length;

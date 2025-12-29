@@ -4,6 +4,14 @@ import 'abstract_interpreter.dart';
 
 /// Represents an array access location in the CFG.
 class ArrayAccess {
+  ArrayAccess({
+    required this.blockId,
+    required this.offset,
+    required this.arrayVariable,
+    required this.indexExpression,
+    required this.instruction,
+  });
+
   /// Block ID where the access occurs.
   final int blockId;
 
@@ -19,14 +27,6 @@ class ArrayAccess {
   /// Instruction that performs the access.
   final Instruction instruction;
 
-  ArrayAccess({
-    required this.blockId,
-    required this.offset,
-    required this.arrayVariable,
-    required this.indexExpression,
-    required this.instruction,
-  });
-
   @override
   String toString() =>
       'ArrayAccess($arrayVariable[$indexExpression] at block $blockId)';
@@ -34,6 +34,15 @@ class ArrayAccess {
 
 /// Result of bounds checking for a single array access.
 class BoundsCheckResult {
+  BoundsCheckResult({
+    required this.access,
+    required this.isSafe,
+    required this.isDefinitelyUnsafe,
+    this.indexInterval,
+    this.arrayLength,
+    required this.reason,
+  });
+
   /// The array access being checked.
   final ArrayAccess access;
 
@@ -51,15 +60,6 @@ class BoundsCheckResult {
 
   /// Human-readable reason for the result.
   final String reason;
-
-  BoundsCheckResult({
-    required this.access,
-    required this.isSafe,
-    required this.isDefinitelyUnsafe,
-    this.indexInterval,
-    this.arrayLength,
-    required this.reason,
-  });
 
   /// Access is unknown (neither provably safe nor unsafe).
   bool get isUnknown => !isSafe && !isDefinitelyUnsafe;
@@ -283,13 +283,13 @@ class BoundsChecker {
 
 /// Summary of bounds checking results for a function.
 class BoundsCheckSummary {
-  final String functionName;
-  final List<BoundsCheckResult> results;
-
   BoundsCheckSummary({
     required this.functionName,
     required this.results,
   });
+
+  final String functionName;
+  final List<BoundsCheckResult> results;
 
   /// Number of provably safe accesses.
   int get safeCount => results.where((r) => r.isSafe).length;

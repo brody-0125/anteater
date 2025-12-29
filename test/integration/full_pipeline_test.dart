@@ -18,7 +18,7 @@ import 'package:anteater/server/language_server.dart';
 void main() {
   group('Full Analysis Pipeline', () {
     test('analyzes simple function through entire pipeline', () {
-      final source = '''
+      const source = '''
         void simpleFunction() {
           var x = 1;
           var y = 2;
@@ -69,7 +69,7 @@ void main() {
     });
 
     test('analyzes complex function with control flow', () {
-      final source = '''
+      const source = '''
         int complexFunction(int n) {
           var result = 0;
           for (var i = 0; i < n; i++) {
@@ -111,7 +111,7 @@ void main() {
     });
 
     test('runs null safety verification', () {
-      final source = '''
+      const source = '''
         void nullSafetyTest(String? maybeNull) {
           if (maybeNull != null) {
             print(maybeNull.length);
@@ -139,7 +139,7 @@ void main() {
     });
 
     test('runs bounds checking', () {
-      final source = '''
+      const source = '''
         void boundsTest(List<int> list) {
           for (var i = 0; i < list.length; i++) {
             print(list[i]);
@@ -167,7 +167,7 @@ void main() {
     });
 
     test('calculates maintainability index for file', () {
-      final source = '''
+      const source = '''
         void function1() {
           print('hello');
         }
@@ -201,13 +201,13 @@ void main() {
     });
 
     test('aggregates metrics across files', () {
-      final source1 = '''
+      const source1 = '''
         void function1() {
           print('file1');
         }
       ''';
 
-      final source2 = '''
+      const source2 = '''
         void function2(int x) {
           if (x > 0) {
             print(x);
@@ -231,7 +231,7 @@ void main() {
 
     test('generates diagnostics from analysis', () {
       // Test that DiagnosticsProvider classes work
-      final diagnostic = Diagnostic(
+      const diagnostic = Diagnostic(
         message: 'Test diagnostic',
         severity: DiagnosticSeverity.warning,
         range: Range.zero,
@@ -246,7 +246,7 @@ void main() {
     test('provides code actions for diagnostics', () async {
       final provider = CodeActionsProvider();
 
-      final diagnostic = Diagnostic(
+      const diagnostic = Diagnostic(
         message: 'High complexity',
         severity: DiagnosticSeverity.warning,
         range: Range.zero,
@@ -265,7 +265,7 @@ void main() {
     });
 
     test('end-to-end: parse, analyze, diagnose', () {
-      final source = '''
+      const source = '''
         void veryComplexFunction(int a, int b, int c) {
           if (a > 0) {
             if (b > 0) {
@@ -312,7 +312,7 @@ void main() {
       expect(result.maintainabilityIndex, lessThan(90));
 
       // Generate threshold-based diagnostic
-      final thresholds = DiagnosticThresholds(cyclomaticComplexity: 10);
+      const thresholds = DiagnosticThresholds(cyclomaticComplexity: 10);
       if (cyclomatic > thresholds.cyclomaticComplexity) {
         // Would generate warning in real DiagnosticsProvider
         expect(cyclomatic, greaterThan(thresholds.cyclomaticComplexity));
@@ -322,7 +322,7 @@ void main() {
 
   group('Error Handling', () {
     test('handles empty source gracefully', () {
-      final source = '';
+      const source = '';
       final parseResult = parseString(content: source);
       final unit = parseResult.unit;
 
@@ -330,7 +330,7 @@ void main() {
     });
 
     test('handles malformed code', () {
-      final source = 'void incomplete(';
+      const source = 'void incomplete(';
 
       // Should not throw, just have parse errors when throwIfDiagnostics is false
       final result = parseString(
@@ -341,7 +341,7 @@ void main() {
     });
 
     test('handles abstract functions', () {
-      final source = '''
+      const source = '''
         abstract class Base {
           void abstractMethod();
         }

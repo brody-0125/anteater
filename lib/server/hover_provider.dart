@@ -11,12 +11,12 @@ import 'language_server.dart';
 /// Displays metrics and analysis information when hovering over
 /// functions, methods, and classes in the IDE.
 class HoverProvider {
-  final SourceLoader _sourceLoader;
-  final MaintainabilityIndexCalculator _miCalculator;
-
   HoverProvider({required SourceLoader sourceLoader})
       : _sourceLoader = sourceLoader,
         _miCalculator = MaintainabilityIndexCalculator(ComplexityCalculator());
+
+  final SourceLoader _sourceLoader;
+  final MaintainabilityIndexCalculator _miCalculator;
 
   /// Returns hover information for the given position.
   Future<Hover?> getHover({
@@ -276,12 +276,6 @@ class HoverProvider {
 
 /// Internal class for function metrics.
 class _FunctionMetrics {
-  final int cyclomatic;
-  final int cognitive;
-  final double mi;
-  final int loc;
-  final _HalsteadMetrics? halstead;
-
   _FunctionMetrics({
     required this.cyclomatic,
     required this.cognitive,
@@ -289,27 +283,33 @@ class _FunctionMetrics {
     required this.loc,
     this.halstead,
   });
+
+  final int cyclomatic;
+  final int cognitive;
+  final double mi;
+  final int loc;
+  final _HalsteadMetrics? halstead;
 }
 
 /// Internal class for Halstead metrics.
 class _HalsteadMetrics {
-  final double volume;
-  final double difficulty;
-  final double effort;
-
   _HalsteadMetrics({
     required this.volume,
     required this.difficulty,
     required this.effort,
   });
+
+  final double volume;
+  final double difficulty;
+  final double effort;
 }
 
 /// AST visitor to find the node at a specific offset.
 class _NodeFinder extends GeneralizingAstVisitor<void> {
+  _NodeFinder(this.targetOffset);
+
   final int targetOffset;
   AstNode? foundNode;
-
-  _NodeFinder(this.targetOffset);
 
   @override
   void visitNode(AstNode node) {
@@ -322,10 +322,10 @@ class _NodeFinder extends GeneralizingAstVisitor<void> {
 
 /// Hover information to display in the IDE.
 class Hover {
+  const Hover({required this.contents, this.range});
+
   final HoverContents contents;
   final Range? range;
-
-  const Hover({required this.contents, this.range});
 
   Map<String, dynamic> toJson() => {
         'contents': contents.toJson(),
@@ -335,10 +335,10 @@ class Hover {
 
 /// Contents of a hover message.
 class HoverContents {
+  const HoverContents({required this.kind, required this.value});
+
   final MarkupKind kind;
   final String value;
-
-  const HoverContents({required this.kind, required this.value});
 
   Map<String, dynamic> toJson() => {
         'kind': kind.value,
@@ -348,9 +348,9 @@ class HoverContents {
 
 /// Markup kinds for hover content.
 class MarkupKind {
-  final String value;
-
   const MarkupKind._(this.value);
+
+  final String value;
 
   static const plaintext = MarkupKind._('plaintext');
   static const markdown = MarkupKind._('markdown');

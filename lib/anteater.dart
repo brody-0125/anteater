@@ -39,6 +39,7 @@
 /// final report = aggregator.generateReport();
 /// loader.dispose();
 /// ```
+library;
 
 // High-level API
 export 'api/anteater.dart' show Anteater;

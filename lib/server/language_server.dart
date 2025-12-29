@@ -10,14 +10,14 @@ import '../metrics/maintainability_index.dart';
 ///
 /// Provides static analysis results via LSP (Language Server Protocol).
 class AnteaterLanguageServer {
+  AnteaterLanguageServer(this.projectPath);
+
   final String projectPath;
   late final SourceLoader _sourceLoader;
   late final ComplexityCalculator _complexityCalculator;
   late final MaintainabilityIndexCalculator _miCalculator;
 
   bool _initialized = false;
-
-  AnteaterLanguageServer(this.projectPath);
 
   /// Initializes the language server.
   Future<void> initialize() async {
@@ -167,12 +167,6 @@ class AnteaterLanguageServer {
 
 /// A diagnostic message.
 class Diagnostic {
-  final String message;
-  final DiagnosticSeverity severity;
-  final Range range;
-  final String source;
-  final String? code;
-
   const Diagnostic({
     required this.message,
     required this.severity,
@@ -180,6 +174,12 @@ class Diagnostic {
     required this.source,
     this.code,
   });
+
+  final String message;
+  final DiagnosticSeverity severity;
+  final Range range;
+  final String source;
+  final String? code;
 
   Map<String, dynamic> toJson() => {
         'message': message,
@@ -203,10 +203,10 @@ enum DiagnosticSeverity {
 
 /// A source range.
 class Range {
+  const Range({required this.start, required this.end});
+
   final Position start;
   final Position end;
-
-  const Range({required this.start, required this.end});
 
   static const Range zero = Range(
     start: Position(line: 0, character: 0),
@@ -221,10 +221,10 @@ class Range {
 
 /// A position in source code.
 class Position {
+  const Position({required this.line, required this.character});
+
   final int line;
   final int character;
-
-  const Position({required this.line, required this.character});
 
   Map<String, dynamic> toJson() => {
         'line': line,
@@ -234,13 +234,13 @@ class Position {
 
 /// Result of analyzing an entire project.
 class ProjectAnalysisResult {
-  final int fileCount;
-  final Map<String, List<Diagnostic>> diagnostics;
-
   const ProjectAnalysisResult({
     required this.fileCount,
     required this.diagnostics,
   });
+
+  final int fileCount;
+  final Map<String, List<Diagnostic>> diagnostics;
 
   int get totalDiagnostics =>
       diagnostics.values.fold(0, (sum, list) => sum + list.length);

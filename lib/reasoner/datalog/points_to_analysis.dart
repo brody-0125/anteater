@@ -8,13 +8,13 @@ import 'fact_extractor.dart';
 /// Provides convenient methods to query analysis results
 /// after running the Datalog engine.
 class PointsToAnalysis {
+  PointsToAnalysis._(this._engine, this._extractor);
+
   final InMemoryDatalogEngine _engine;
   final FactExtractor _extractor;
 
   /// Maps variable IDs back to names for debugging.
   final Map<int, String> _varNames = {};
-
-  PointsToAnalysis._(this._engine, this._extractor);
 
   /// Creates and runs points-to analysis on a function IR.
   static PointsToAnalysis analyzeFunction(FunctionIr ir) {

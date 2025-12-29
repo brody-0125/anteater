@@ -33,10 +33,10 @@ class AvoidLateKeywordRule extends StyleRule {
 }
 
 class _AvoidLateKeywordVisitor extends RecursiveAstVisitor<void> {
+  _AvoidLateKeywordVisitor(this.lineInfo);
+
   final LineInfo lineInfo;
   final List<Violation> violations = [];
-
-  _AvoidLateKeywordVisitor(this.lineInfo);
 
   @override
   void visitVariableDeclarationList(VariableDeclarationList node) {
