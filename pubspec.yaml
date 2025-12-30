@@ -18,7 +18,7 @@ funding:
   - https://github.com/sponsors/brody-0125
 
 environment:
-  sdk: ^3.10.0
+  sdk: ^3.10.7
 
 dependencies:
   analyzer: ^9.0.0

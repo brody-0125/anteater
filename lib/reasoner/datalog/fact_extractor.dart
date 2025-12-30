@@ -84,26 +84,29 @@ class FactExtractor {
   }
 
   /// Extracts facts from a single instruction.
+  ///
+  /// Generates both flow-insensitive facts (e.g., `Assign`) and
+  /// flow-sensitive facts with block IDs (e.g., `AssignAt`).
   List<Fact> _extractFromInstruction(Instruction instr, int blockId) {
     final facts = <Fact>[];
 
     switch (instr) {
       case AssignInstruction():
-        facts.addAll(_extractFromAssign(instr));
+        facts.addAll(_extractFromAssign(instr, blockId));
       case CallInstruction():
-        facts.addAll(_extractFromCall(instr));
+        facts.addAll(_extractFromCall(instr, blockId));
       case LoadFieldInstruction():
-        facts.addAll(_extractFromLoadField(instr));
+        facts.addAll(_extractFromLoadField(instr, blockId));
       case StoreFieldInstruction():
-        facts.addAll(_extractFromStoreField(instr));
+        facts.addAll(_extractFromStoreField(instr, blockId));
       case LoadIndexInstruction():
-        facts.addAll(_extractFromLoadIndex(instr));
+        facts.addAll(_extractFromLoadIndex(instr, blockId));
       case StoreIndexInstruction():
-        facts.addAll(_extractFromStoreIndex(instr));
+        facts.addAll(_extractFromStoreIndex(instr, blockId));
       case PhiInstruction():
-        facts.addAll(_extractFromPhi(instr));
+        facts.addAll(_extractFromPhi(instr, blockId));
       case AwaitInstruction():
-        facts.addAll(_extractFromAwait(instr));
+        facts.addAll(_extractFromAwait(instr, blockId));
       // Known instruction types that intentionally don't generate relational facts
       case JumpInstruction():
       case BranchInstruction():
@@ -120,9 +123,11 @@ class FactExtractor {
   }
 
   /// Extracts facts from assignment instruction.
-  List<Fact> _extractFromAssign(AssignInstruction instr) {
+  ///
+  /// Emits both flow-insensitive facts and flow-sensitive `*At` facts.
+  List<Fact> _extractFromAssign(AssignInstruction instr, int blockId) {
     final facts = <Fact>[];
-    final targetId = getVarId(instr.target.name);
+    final targetId = getVarId(instr.target.toString());
 
     switch (instr.value) {
       case ConstantValue():
@@ -130,16 +135,19 @@ class FactExtractor {
         break;
 
       case VariableValue(variable: final v):
-        // Variable copy: Assign(target, source)
-        final sourceId = getVarId(v.name);
+        // Variable copy: Assign(target, source) + AssignAt(block, target, source)
+        final sourceId = getVarId(v.toString());
         facts.add(Fact('Assign', [targetId, sourceId]));
+        facts.add(Fact('AssignAt', [blockId, targetId, sourceId]));
 
       case NewObjectValue(typeName: final type):
         // Object allocation: Assign(var, expr) + Alloc(expr, heap)
         final exprId = instr.offset; // Use offset as expression ID
         final heapId = getHeapId(type, instr.offset);
         facts.add(Fact('Assign', [targetId, exprId]));
+        facts.add(Fact('AssignAt', [blockId, targetId, exprId]));
         facts.add(Fact('Alloc', [exprId, heapId]));
+        facts.add(Fact('AllocAt', [blockId, exprId, heapId]));
 
       case CallValue(methodName: final method, :final receiver):
         // Method call result assignment
@@ -148,18 +156,22 @@ class FactExtractor {
           final receiverId = _getValueVarId(receiver);
           if (receiverId != null) {
             facts.add(Fact('Call', [callSite, receiverId, method, targetId]));
+            facts.add(Fact('CallAt', [blockId, callSite, receiverId, method, targetId]));
           }
         }
         // Allocate return value (conservative)
         final heapId = getHeapId('Return\$$method', instr.offset);
         facts.add(Fact('Assign', [targetId, instr.offset]));
+        facts.add(Fact('AssignAt', [blockId, targetId, instr.offset]));
         facts.add(Fact('Alloc', [instr.offset, heapId]));
+        facts.add(Fact('AllocAt', [blockId, instr.offset, heapId]));
 
       case FieldAccessValue(receiver: final recv, fieldName: final field):
         // Field access creates LoadField
         final baseId = _getValueVarId(recv);
         if (baseId != null) {
           facts.add(Fact('LoadField', [baseId, field, targetId]));
+          facts.add(Fact('LoadFieldAt', [blockId, baseId, field, targetId]));
         }
 
       case IndexAccessValue(receiver: final recv):
@@ -167,6 +179,7 @@ class FactExtractor {
         final baseId = _getValueVarId(recv);
         if (baseId != null) {
           facts.add(Fact('LoadField', [baseId, '[]', targetId]));
+          facts.add(Fact('LoadFieldAt', [blockId, baseId, '[]', targetId]));
         }
 
       case BinaryOpValue():
@@ -182,7 +195,7 @@ class FactExtractor {
   }
 
   /// Extracts facts from call instruction.
-  List<Fact> _extractFromCall(CallInstruction instr) {
+  List<Fact> _extractFromCall(CallInstruction instr, int blockId) {
     final facts = <Fact>[];
     final callSite = _callSiteCounter++;
 
@@ -191,68 +204,94 @@ class FactExtractor {
       receiverId = _getValueVarId(instr.receiver!);
     }
 
-    final resultId = instr.result != null ? getVarId(instr.result!.name) : -1;
+    final resultId = instr.result != null ? getVarId(instr.result!.toString()) : -1;
 
     if (receiverId != null) {
       facts.add(Fact('Call', [callSite, receiverId, instr.methodName, resultId]));
+      facts.add(Fact('CallAt', [blockId, callSite, receiverId, instr.methodName, resultId]));
     } else {
       // Static/top-level function call
       facts.add(Fact('Call', [callSite, -1, instr.methodName, resultId]));
+      facts.add(Fact('CallAt', [blockId, callSite, -1, instr.methodName, resultId]));
     }
 
     return facts;
   }
 
   /// Extracts facts from field load instruction.
-  List<Fact> _extractFromLoadField(LoadFieldInstruction instr) {
+  List<Fact> _extractFromLoadField(LoadFieldInstruction instr, int blockId) {
     final baseId = _getValueVarId(instr.base);
     if (baseId == null) return [];
 
-    final targetId = getVarId(instr.result.name);
-    return [Fact('LoadField', [baseId, instr.fieldName, targetId])];
+    final targetId = getVarId(instr.result.toString());
+    return [
+      Fact('LoadField', [baseId, instr.fieldName, targetId]),
+      Fact('LoadFieldAt', [blockId, baseId, instr.fieldName, targetId]),
+    ];
   }
 
   /// Extracts facts from field store instruction.
-  List<Fact> _extractFromStoreField(StoreFieldInstruction instr) {
+  List<Fact> _extractFromStoreField(StoreFieldInstruction instr, int blockId) {
     final baseId = _getValueVarId(instr.base);
     final sourceId = _getValueVarId(instr.value);
 
     if (baseId == null || sourceId == null) return [];
 
-    return [Fact('StoreField', [baseId, instr.fieldName, sourceId])];
+    return [
+      Fact('StoreField', [baseId, instr.fieldName, sourceId]),
+      Fact('StoreFieldAt', [blockId, baseId, instr.fieldName, sourceId]),
+    ];
   }
 
   /// Extracts facts from index load instruction.
-  List<Fact> _extractFromLoadIndex(LoadIndexInstruction instr) {
+  List<Fact> _extractFromLoadIndex(LoadIndexInstruction instr, int blockId) {
     final baseId = _getValueVarId(instr.base);
     if (baseId == null) return [];
 
-    final targetId = getVarId(instr.result.name);
+    final targetId = getVarId(instr.result.toString());
     // Treat index access as field access with special name
-    return [Fact('LoadField', [baseId, '[]', targetId])];
+    return [
+      Fact('LoadField', [baseId, '[]', targetId]),
+      Fact('LoadFieldAt', [blockId, baseId, '[]', targetId]),
+    ];
   }
 
   /// Extracts facts from index store instruction.
-  List<Fact> _extractFromStoreIndex(StoreIndexInstruction instr) {
+  List<Fact> _extractFromStoreIndex(StoreIndexInstruction instr, int blockId) {
     final baseId = _getValueVarId(instr.base);
     final sourceId = _getValueVarId(instr.value);
 
     if (baseId == null || sourceId == null) return [];
 
     // Treat index access as field access with special name
-    return [Fact('StoreField', [baseId, '[]', sourceId])];
+    return [
+      Fact('StoreField', [baseId, '[]', sourceId]),
+      Fact('StoreFieldAt', [blockId, baseId, '[]', sourceId]),
+    ];
   }
 
   /// Extracts facts from phi instruction.
-  List<Fact> _extractFromPhi(PhiInstruction instr) {
+  ///
+  /// Emits:
+  /// - `Assign(target, source)` for flow-insensitive analysis (one per operand)
+  /// - `PhiAt(block, target, predBlock, source)` for flow-sensitive analysis
+  ///
+  /// The `PhiAt` fact captures the full phi structure including which
+  /// predecessor block each operand comes from, enabling precise
+  /// flow-sensitive dataflow analysis.
+  List<Fact> _extractFromPhi(PhiInstruction instr, int blockId) {
     final facts = <Fact>[];
-    final targetId = getVarId(instr.target.name);
+    final targetId = getVarId(instr.target.toString());
 
     // Phi node creates multiple assignments (one per operand)
     for (final entry in instr.operands.entries) {
+      final predBlock = entry.key;
       final sourceId = _getValueVarId(entry.value);
       if (sourceId != null) {
+        // Flow-insensitive: simple assignment
         facts.add(Fact('Assign', [targetId, sourceId]));
+        // Flow-sensitive: phi with predecessor info
+        facts.add(Fact('PhiAt', [blockId, targetId, predBlock.id, sourceId]));
       }
     }
 
@@ -263,19 +302,25 @@ class FactExtractor {
   ///
   /// Models the dataflow from the future to the result variable.
   /// For points-to analysis, this is essentially an assignment.
-  List<Fact> _extractFromAwait(AwaitInstruction instr) {
+  List<Fact> _extractFromAwait(AwaitInstruction instr, int blockId) {
     final sourceId = _getValueVarId(instr.future);
     if (sourceId == null) return [];
 
-    final targetId = getVarId(instr.result.name);
+    final targetId = getVarId(instr.result.toString());
     // Await transfers the unwrapped value from future to result
-    return [Fact('Assign', [targetId, sourceId])];
+    return [
+      Fact('Assign', [targetId, sourceId]),
+      Fact('AssignAt', [blockId, targetId, sourceId]),
+    ];
   }
 
   /// Gets variable ID from a Value, if it's a variable reference.
+  ///
+  /// Uses the full SSA-versioned name (e.g., "x_1") to preserve
+  /// flow-sensitivity in the analysis.
   int? _getValueVarId(Value value) {
     if (value is VariableValue) {
-      return getVarId(value.variable.name);
+      return getVarId(value.variable.toString());
     }
     return null;
   }
