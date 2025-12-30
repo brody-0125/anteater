@@ -117,7 +117,7 @@ class AbstractInterpreter<D extends AbstractDomain<D>> {
       entryStates[block.id] = entryState;
 
       // Transfer function: process instructions
-      final exitState = _transferBlock(block, entryState);
+      final exitState = _transferBlock(block, entryState, exitStates);
       exitStates[block.id] = exitState;
 
       // Add successors to worklist
@@ -182,7 +182,7 @@ class AbstractInterpreter<D extends AbstractDomain<D>> {
         if (!_statesEqual(narrowedEntry, oldEntry)) {
           changed = true;
           entryStates[block.id] = narrowedEntry;
-          exitStates[block.id] = _transferBlock(block, narrowedEntry);
+          exitStates[block.id] = _transferBlock(block, narrowedEntry, exitStates);
         }
       }
     }
@@ -191,14 +191,18 @@ class AbstractInterpreter<D extends AbstractDomain<D>> {
   }
 
   /// Transfer function for a basic block.
-  AbstractState<D> _transferBlock(BasicBlock block, AbstractState<D> state) {
+  AbstractState<D> _transferBlock(
+    BasicBlock block,
+    AbstractState<D> state,
+    Map<int, AbstractState<D>> exitStates,
+  ) {
     var currentState = AbstractState<D>(
       _defaultValue,
       Map<String, D>.from(state.values),
     );
 
     for (final instr in block.instructions) {
-      currentState = _transferInstruction(instr, currentState);
+      currentState = _transferInstruction(instr, currentState, exitStates);
     }
 
     return currentState;
@@ -208,12 +212,34 @@ class AbstractInterpreter<D extends AbstractDomain<D>> {
   AbstractState<D> _transferInstruction(
     Instruction instr,
     AbstractState<D> state,
+    Map<int, AbstractState<D>> exitStates,
   ) {
     if (instr is AssignInstruction) {
       return _transferAssign(instr, state);
     }
     if (instr is PhiInstruction) {
-      return _transferPhi(instr, state);
+      return _transferPhi(instr, state, exitStates);
+    }
+    if (instr is LoadFieldInstruction) {
+      return _transferLoadField(instr, state);
+    }
+    if (instr is CallInstruction) {
+      return _transferCall(instr, state);
+    }
+    if (instr is AwaitInstruction) {
+      return _transferAwait(instr, state);
+    }
+    if (instr is LoadIndexInstruction) {
+      return _transferLoadIndex(instr, state);
+    }
+    if (instr is NullCheckInstruction) {
+      return _transferNullCheck(instr, state);
+    }
+    if (instr is CastInstruction) {
+      return _transferCast(instr, state);
+    }
+    if (instr is TypeCheckInstruction) {
+      return _transferTypeCheck(instr, state);
     }
     // Other instructions don't modify abstract state for interval analysis
     return state;
@@ -236,24 +262,157 @@ class AbstractInterpreter<D extends AbstractDomain<D>> {
   }
 
   /// Transfer function for phi instruction.
+  ///
+  /// Only includes values from reachable predecessors (those that have
+  /// been visited, indicated by having a non-empty exit state).
   AbstractState<D> _transferPhi(
     PhiInstruction instr,
     AbstractState<D> state,
+    Map<int, AbstractState<D>> exitStates,
   ) {
     final newState = AbstractState<D>(
       _defaultValue,
       Map<String, D>.from(state.values),
     );
 
-    // Join all incoming values
+    // Join values only from reachable predecessors
     D result = _defaultValue.bottom;
-    for (final operand in instr.operands.values) {
-      final value = _evaluateValue(operand, state);
+    for (final entry in instr.operands.entries) {
+      final predBlock = entry.key;
+      final predExitState = exitStates[predBlock.id];
+
+      // Skip unreachable predecessors (empty/unvisited exit state)
+      if (predExitState == null || predExitState.values.isEmpty) {
+        continue;
+      }
+
+      final value = _evaluateValue(entry.value, state);
       result = result.join(value);
     }
 
     newState[instr.target.toString()] = result;
 
+    return newState;
+  }
+
+  /// Transfer function for field load.
+  ///
+  /// Conservatively assigns TOP to the result since field values
+  /// are not tracked in interval analysis.
+  AbstractState<D> _transferLoadField(
+    LoadFieldInstruction instr,
+    AbstractState<D> state,
+  ) {
+    final newState = AbstractState<D>(
+      _defaultValue,
+      Map<String, D>.from(state.values),
+    );
+    newState[instr.result.toString()] = _defaultValue.top;
+    return newState;
+  }
+
+  /// Transfer function for method/function calls.
+  ///
+  /// Conservatively assigns TOP to the result since return values
+  /// are not tracked in interval analysis.
+  AbstractState<D> _transferCall(
+    CallInstruction instr,
+    AbstractState<D> state,
+  ) {
+    final newState = AbstractState<D>(
+      _defaultValue,
+      Map<String, D>.from(state.values),
+    );
+    if (instr.result != null) {
+      newState[instr.result.toString()] = _defaultValue.top;
+    }
+    return newState;
+  }
+
+  /// Transfer function for await expressions.
+  ///
+  /// Conservatively assigns TOP to the result since future values
+  /// are not tracked in interval analysis.
+  AbstractState<D> _transferAwait(
+    AwaitInstruction instr,
+    AbstractState<D> state,
+  ) {
+    final newState = AbstractState<D>(
+      _defaultValue,
+      Map<String, D>.from(state.values),
+    );
+    newState[instr.result.toString()] = _defaultValue.top;
+    return newState;
+  }
+
+  /// Transfer function for index load (e.g., list[i]).
+  ///
+  /// Conservatively assigns TOP to the result since array element values
+  /// are not tracked in interval analysis.
+  AbstractState<D> _transferLoadIndex(
+    LoadIndexInstruction instr,
+    AbstractState<D> state,
+  ) {
+    final newState = AbstractState<D>(
+      _defaultValue,
+      Map<String, D>.from(state.values),
+    );
+    newState[instr.result.toString()] = _defaultValue.top;
+    return newState;
+  }
+
+  /// Transfer function for null check (e.g., x!).
+  ///
+  /// Propagates the operand's abstract value to the result.
+  AbstractState<D> _transferNullCheck(
+    NullCheckInstruction instr,
+    AbstractState<D> state,
+  ) {
+    final newState = AbstractState<D>(
+      _defaultValue,
+      Map<String, D>.from(state.values),
+    );
+    final operandValue = _evaluateValue(instr.operand, state);
+    newState[instr.result.toString()] = operandValue;
+    return newState;
+  }
+
+  /// Transfer function for type cast (e.g., x as int).
+  ///
+  /// Propagates the operand's abstract value to the result if it's
+  /// a numeric type, otherwise assigns TOP.
+  AbstractState<D> _transferCast(
+    CastInstruction instr,
+    AbstractState<D> state,
+  ) {
+    final newState = AbstractState<D>(
+      _defaultValue,
+      Map<String, D>.from(state.values),
+    );
+    // For numeric types, propagate the value; otherwise TOP
+    if (instr.targetType == 'int' || instr.targetType == 'num') {
+      final operandValue = _evaluateValue(instr.operand, state);
+      newState[instr.result.toString()] = operandValue;
+    } else {
+      newState[instr.result.toString()] = _defaultValue.top;
+    }
+    return newState;
+  }
+
+  /// Transfer function for type check (e.g., x is int).
+  ///
+  /// Assigns TOP to the boolean result since type checks produce
+  /// boolean values, not numeric intervals.
+  AbstractState<D> _transferTypeCheck(
+    TypeCheckInstruction instr,
+    AbstractState<D> state,
+  ) {
+    final newState = AbstractState<D>(
+      _defaultValue,
+      Map<String, D>.from(state.values),
+    );
+    // Type check produces a boolean, not an interval
+    newState[instr.result.toString()] = _defaultValue.top;
     return newState;
   }
 
