@@ -25,6 +25,10 @@ class SsaBuilder {
   /// Tracks phi instructions created for each block (for insertion).
   final Map<int, List<PhiInstruction>> _blockPhis = {};
 
+  /// Tracks substitutions for eliminated trivial phis.
+  /// When a phi is trivial (all operands same), map phi.target -> replacement.
+  final Map<Variable, Value> _substitutions = {};
+
   int _versionCounter = 0;
 
   /// Writes a variable definition in a block.
@@ -36,11 +40,12 @@ class SsaBuilder {
   /// Reads a variable's value in a block.
   ///
   /// If the variable is not defined locally, searches predecessors
-  /// and inserts phi functions as needed.
+  /// and inserts phi functions as needed. The result is resolved through
+  /// substitution chains from eliminated trivial phis.
   Value readVariable(Variable variable, BasicBlock block) {
     final localDef = _currentDef[block.id]?[variable.name];
     if (localDef != null) {
-      return localDef;
+      return _resolveValue(localDef);
     }
     return _readVariableRecursive(variable, block);
   }
@@ -114,8 +119,12 @@ class SsaBuilder {
     }
 
     // Replace phi with the single value
-    // Note: In a complete implementation, we would also update all users
-    return same;
+    // Record substitution so all uses are updated
+    _substitutions[phi.target] = same;
+
+    // Recursively check if the replacement creates more trivial phis
+    // (e.g., if same is a phi variable that was also eliminated)
+    return _resolveValue(same);
   }
 
   bool _valuesEqual(Value a, Value b) {
@@ -126,6 +135,30 @@ class SsaBuilder {
       return a.value == b.value;
     }
     return false;
+  }
+
+  /// Resolves a value by following substitution chains.
+  ///
+  /// When a trivial phi is eliminated, its target is mapped to the
+  /// replacement value. This method follows the chain until reaching
+  /// a non-substituted value.
+  Value _resolveValue(Value value) {
+    if (value is! VariableValue) return value;
+
+    // Explicitly typed as Value since substitutions can be any Value type
+    Value current = value;
+    // Follow substitution chain (with cycle detection)
+    final visited = <Variable>{};
+    while (current is VariableValue) {
+      final variable = current.variable;
+      if (visited.contains(variable)) break; // Cycle detected
+      visited.add(variable);
+
+      final substitution = _substitutions[variable];
+      if (substitution == null) break;
+      current = substitution;
+    }
+    return current;
   }
 
   /// Seals a block, indicating all predecessors are known.
@@ -181,15 +214,20 @@ class SsaBuilder {
     for (final block in cfg.blocks) {
       final phis = _blockPhis[block.id];
       if (phis != null && phis.isNotEmpty) {
-        // Remove duplicates (same target variable)
+        // Remove duplicates (same target variable) and filter eliminated phis
         final seenTargets = <String>{};
         final uniquePhis = <PhiInstruction>[];
         for (final phi in phis) {
+          // Skip phis that were eliminated (have substitution)
+          if (_substitutions.containsKey(phi.target)) continue;
+
           final targetKey = phi.target.name;
           if (!seenTargets.contains(targetKey)) {
             seenTargets.add(targetKey);
             // Only add non-trivial phis with operands
             if (phi.operands.isNotEmpty) {
+              // Resolve operands through substitution chains
+              _resolvePhiOperands(phi);
               uniquePhis.add(phi);
             }
           }
@@ -199,6 +237,17 @@ class SsaBuilder {
         block.instructions.insertAll(0, uniquePhis);
       }
     }
+  }
+
+  /// Resolves phi operands through substitution chains.
+  void _resolvePhiOperands(PhiInstruction phi) {
+    final resolvedOperands = <BasicBlock, Value>{};
+    for (final entry in phi.operands.entries) {
+      resolvedOperands[entry.key] = _resolveValue(entry.value);
+    }
+    phi.operands
+      ..clear()
+      ..addAll(resolvedOperands);
   }
 
   void _processBlock(BasicBlock block) {
@@ -250,21 +299,30 @@ class SsaBuilder {
         );
 
       case CallInstruction():
+        Variable? newResult;
+        if (instr.result != null) {
+          final newVersion = ++_versionCounter;
+          newResult = instr.result!.withVersion(newVersion);
+          writeVariable(instr.result!, block, VariableValue(newResult));
+        }
         return CallInstruction(
           offset: instr.offset,
           receiver:
               instr.receiver != null ? _renameValue(instr.receiver!, block) : null,
           methodName: instr.methodName,
           arguments: instr.arguments.map((a) => _renameValue(a, block)).toList(),
-          result: instr.result,
+          result: newResult,
         );
 
       case LoadFieldInstruction():
+        final newVersion = ++_versionCounter;
+        final newResult = instr.result.withVersion(newVersion);
+        writeVariable(instr.result, block, VariableValue(newResult));
         return LoadFieldInstruction(
           offset: instr.offset,
           base: _renameValue(instr.base, block),
           fieldName: instr.fieldName,
-          result: instr.result,
+          result: newResult,
         );
 
       case StoreFieldInstruction():
@@ -276,11 +334,14 @@ class SsaBuilder {
         );
 
       case LoadIndexInstruction():
+        final newVersion = ++_versionCounter;
+        final newResult = instr.result.withVersion(newVersion);
+        writeVariable(instr.result, block, VariableValue(newResult));
         return LoadIndexInstruction(
           offset: instr.offset,
           base: _renameValue(instr.base, block),
           index: _renameValue(instr.index, block),
-          result: instr.result,
+          result: newResult,
         );
 
       case StoreIndexInstruction():
@@ -292,27 +353,36 @@ class SsaBuilder {
         );
 
       case NullCheckInstruction():
+        final newVersion = ++_versionCounter;
+        final newResult = instr.result.withVersion(newVersion);
+        writeVariable(instr.result, block, VariableValue(newResult));
         return NullCheckInstruction(
           offset: instr.offset,
           operand: _renameValue(instr.operand, block),
-          result: instr.result,
+          result: newResult,
         );
 
       case CastInstruction():
+        final newVersion = ++_versionCounter;
+        final newResult = instr.result.withVersion(newVersion);
+        writeVariable(instr.result, block, VariableValue(newResult));
         return CastInstruction(
           offset: instr.offset,
           operand: _renameValue(instr.operand, block),
           targetType: instr.targetType,
-          result: instr.result,
+          result: newResult,
           isNullable: instr.isNullable,
         );
 
       case TypeCheckInstruction():
+        final newVersion = ++_versionCounter;
+        final newResult = instr.result.withVersion(newVersion);
+        writeVariable(instr.result, block, VariableValue(newResult));
         return TypeCheckInstruction(
           offset: instr.offset,
           operand: _renameValue(instr.operand, block),
           targetType: instr.targetType,
-          result: instr.result,
+          result: newResult,
           negated: instr.negated,
         );
 
@@ -320,6 +390,16 @@ class SsaBuilder {
         return ThrowInstruction(
           offset: instr.offset,
           exception: _renameValue(instr.exception, block),
+        );
+
+      case AwaitInstruction():
+        final newVersion = ++_versionCounter;
+        final newResult = instr.result.withVersion(newVersion);
+        writeVariable(instr.result, block, VariableValue(newResult));
+        return AwaitInstruction(
+          offset: instr.offset,
+          future: _renameValue(instr.future, block),
+          result: newResult,
         );
 
       default:

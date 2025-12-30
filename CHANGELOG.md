@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2025-12-30
+
+### Changed
+
+- **SDK Version**: Updated minimum SDK constraint from `^3.10.0` to `^3.10.7` to fix pub.dev dependency resolution failure
+
+### Fixed
+
+- **SSA Builder**: Added result field versioning for `CallInstruction`, `LoadFieldInstruction`, `LoadIndexInstruction`, `NullCheckInstruction`, `CastInstruction`, `TypeCheckInstruction`
+- **SSA Builder**: Implemented trivial phi use-site replacement with substitution chain resolution
+- **SSA Builder**: Added `AwaitInstruction` result versioning
+- **Datalog Facts**: Preserved SSA versions in `_getValueVarId` using `variable.toString()`
+- **Datalog Facts**: Added flow-sensitive `*At` facts (`AssignAt`, `AllocAt`, `CallAt`, `LoadFieldAt`, `StoreFieldAt`, `PhiAt`) with block IDs
+- **Abstract Interpreter**: Added missing transfer functions for `LoadField`, `Call`, `Await`, `LoadIndex`, `NullCheck`, `Cast`, `TypeCheck`
+- **Abstract Interpreter**: Fixed unreachable predecessor filtering in phi transfer function
+
 ## [0.3.1] - 2025-12-29
 
 ### Changed
