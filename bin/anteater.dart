@@ -21,15 +21,6 @@ import 'package:yaml/yaml.dart';
 
 /// Anteater CLI - Deep Semantic Analysis Engine for Dart
 void main(List<String> arguments) async {
-  final parser = ArgParser()
-    ..addCommand('analyze')
-    ..addCommand('metrics')
-    ..addCommand('debt')
-    ..addCommand('clones')
-    ..addCommand('server')
-    ..addFlag('help', abbr: 'h', help: 'Show this help message')
-    ..addFlag('version', abbr: 'v', help: 'Show version');
-
   final analyzeParser = ArgParser()
     ..addOption('path', abbr: 'p', defaultsTo: '.', help: 'Path to analyze')
     ..addOption(
@@ -167,6 +158,16 @@ void main(List<String> arguments) async {
       help: 'Suppress progress output',
     );
 
+  // Main parser with subcommands attached
+  final parser = ArgParser()
+    ..addCommand('analyze', analyzeParser)
+    ..addCommand('metrics', metricsParser)
+    ..addCommand('debt', debtParser)
+    ..addCommand('clones', clonesParser)
+    ..addCommand('server')
+    ..addFlag('help', abbr: 'h', help: 'Show this help message')
+    ..addFlag('version', abbr: 'v', help: 'Show version');
+
   try {
     final results = parser.parse(arguments);
 
@@ -187,16 +188,16 @@ void main(List<String> arguments) async {
 
     switch (results.command!.name) {
       case 'analyze':
-        await _runAnalyze(analyzeParser.parse(results.command!.arguments));
+        await _runAnalyze(results.command!);
         break;
       case 'metrics':
-        await _runMetrics(metricsParser.parse(results.command!.arguments));
+        await _runMetrics(results.command!);
         break;
       case 'debt':
-        await _runDebt(debtParser.parse(results.command!.arguments));
+        await _runDebt(results.command!);
         break;
       case 'clones':
-        await _runClones(clonesParser.parse(results.command!.arguments));
+        await _runClones(results.command!);
         break;
       case 'server':
         await _runServer();
