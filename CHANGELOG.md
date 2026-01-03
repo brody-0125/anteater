@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-01-04
+
+### Added
+
+- **Parallel Analysis API**: Memory-efficient concurrent file analysis for large codebases
+  - `ParallelAnalyzer` class with configurable concurrency and chunked processing
+  - `ParallelAnalysisConfig` for tuning `maxConcurrency` (default: 4) and `chunkSize` (default: 50)
+  - `FileAnalysisResult` for per-file analysis results with error handling
+  - `AnalysisProgressCallback` for real-time progress tracking
+  - `analyzeWithProgress()` method with progress callback support
+  - `analyzeStream()` for sequential streaming results
+  - `analyzeParallelStream()` for parallel streaming with chunked processing
+  - Automatic exclusion of generated files (`.g.dart`, `.freezed.dart`)
+- **MetricsAggregator Enhancement**: `addPrecomputedResult()` method for parallel aggregation without AST retention
+- **Library Documentation**: Added parallel analysis usage examples to library doc comment
+
+### Changed
+
+- **Library Exports**: Exported `ParallelAnalyzer`, `ParallelAnalysisConfig`, `FileAnalysisResult`, `AnalysisProgressCallback` from main library
+
 ## [0.3.2] - 2025-12-30
 
 ### Changed
@@ -88,7 +108,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Per-rule severity override
   - Per-rule file exclusion patterns
   - Global exclusion patterns
-- **CLI Command**: `anteater rules --path <path>` for running style rules
+- **CLI Command**: `anteater analyze -p <path>` for running style rules analysis
 - **Performance Optimizations**
   - RegExp pattern caching for glob matching
   - Lazy computed properties in `AnalysisResult`
