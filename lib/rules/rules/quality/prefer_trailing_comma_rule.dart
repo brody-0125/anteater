@@ -106,31 +106,23 @@ class _PreferTrailingCommaVisitor extends RecursiveAstVisitor<void> {
       return;
     }
 
-    // Check if last element has a trailing comma
+    // Check if last element has a trailing comma using token-based detection
     final lastElement = elements.last;
-    final lastElementEnd = lastElement.end;
-    final closingOffset = rightOffset;
+    final lastToken = lastElement.endToken;
 
-    // Get the source between last element and closing bracket
-    // If there's no comma, add a violation
-    final source = node.toSource();
-    final lastElementEndInSource = lastElementEnd - node.offset;
-    final closingInSource = closingOffset - node.offset;
-
-    if (lastElementEndInSource < source.length &&
-        closingInSource <= source.length) {
-      final between =
-          source.substring(lastElementEndInSource, closingInSource);
-      if (!between.contains(',')) {
-        violations.add(Violation(
-          ruleId: 'prefer-trailing-comma',
-          message: 'Add trailing comma to multiline $context.',
-          location: SourceRange.fromNode(lastElement, lineInfo),
-          severity: RuleSeverity.info,
-          suggestion: 'Add a comma after the last element.',
-          sourceCode: lastElement.toSource(),
-        ));
-      }
+    // The next token after the last element should be either:
+    // - A comma (trailing comma present)
+    // - The closing bracket (no trailing comma)
+    final nextToken = lastToken.next;
+    if (nextToken != null && nextToken.lexeme != ',') {
+      violations.add(Violation(
+        ruleId: 'prefer-trailing-comma',
+        message: 'Add trailing comma to multiline $context.',
+        location: SourceRange.fromNode(lastElement, lineInfo),
+        severity: RuleSeverity.info,
+        suggestion: 'Add a comma after the last element.',
+        sourceCode: lastElement.toSource(),
+      ));
     }
   }
 }

@@ -76,8 +76,13 @@ class _AvoidUnnecessaryCastVisitor extends RecursiveAstVisitor<void> {
     }
 
     // Detect: (x as Type) as Type (double cast)
-    if (expr is AsExpression) {
-      final innerType = expr.type;
+    // Unwrap parentheses to find inner AsExpression
+    var innerExpr = expr;
+    while (innerExpr is ParenthesizedExpression) {
+      innerExpr = innerExpr.expression;
+    }
+    if (innerExpr is AsExpression) {
+      final innerType = innerExpr.type;
       if (_typesAreEqual(innerType, targetType)) {
         violations.add(Violation(
           ruleId: 'avoid-unnecessary-cast',

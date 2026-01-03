@@ -33,7 +33,7 @@ anteater:
 Run analysis:
 
 ```bash
-anteater rules --path lib
+anteater analyze -p lib
 ```
 
 ---
@@ -603,14 +603,14 @@ anteater:
 ### Basic Commands
 
 ```bash
-# Run style rules
-anteater rules --path lib
+# Run style rules analysis
+anteater analyze -p lib
 
 # Calculate metrics
-anteater metrics --path lib
+anteater metrics -p lib
 
-# Full analysis
-anteater analyze --path lib
+# Detect technical debt
+anteater debt -p lib
 
 # Start LSP server
 anteater server
@@ -620,21 +620,21 @@ anteater server
 
 ```bash
 # Text output (default)
-anteater rules --path lib --format text
+anteater analyze -p lib -f text
 
 # JSON output (for programmatic processing)
-anteater rules --path lib --format json
+anteater analyze -p lib -f json
 
-# HTML report
-anteater analyze --path lib --format html --output report.html
+# Metrics with JSON output
+anteater metrics -p lib -f json
 ```
 
 ### Watch Mode
 
 ```bash
 # Re-run on file changes
-anteater rules --path lib --watch
-anteater metrics --path lib --watch
+anteater analyze -p lib --watch
+anteater metrics -p lib --watch
 ```
 
 ### CI/CD Flags
@@ -748,20 +748,20 @@ jobs:
       - name: Install Anteater
         run: dart pub global activate anteater
 
-      - name: Run style rules
-        run: anteater rules --path lib --format json > rules-report.json
+      - name: Run style analysis
+        run: anteater analyze -p lib -f json > analysis-report.json
 
       - name: Run metrics
-        run: anteater metrics --path lib --format json > metrics-report.json
+        run: anteater metrics -p lib -f json > metrics-report.json
 
       - name: Run debt analysis
-        run: anteater debt --path lib --format json > debt-report.json
+        run: anteater debt -p lib -f json > debt-report.json
 
       - name: Check debt threshold
-        run: anteater debt --path lib --threshold 100 --fail-on-threshold
+        run: anteater debt -p lib --threshold 100 --fail-on-threshold
 
       - name: Check for violations
-        run: anteater analyze --path lib --no-fatal-infos
+        run: anteater analyze -p lib --no-fatal-infos
 ```
 
 ### GitLab CI
@@ -772,9 +772,9 @@ anteater:
   script:
     - dart pub get
     - dart pub global activate anteater
-    - anteater rules --path lib
-    - anteater metrics --path lib
-    - anteater debt --path lib --threshold 100 --fail-on-threshold
+    - anteater analyze -p lib
+    - anteater metrics -p lib
+    - anteater debt -p lib --threshold 100 --fail-on-threshold
   artifacts:
     reports:
       codequality: anteater-report.json
@@ -787,7 +787,7 @@ anteater:
 # .git/hooks/pre-commit
 
 echo "Running Anteater..."
-anteater rules --path lib --quiet
+anteater analyze -p lib --quiet
 
 if [ $? -ne 0 ]; then
   echo "Anteater found issues. Please fix before committing."

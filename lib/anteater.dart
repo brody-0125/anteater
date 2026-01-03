@@ -39,10 +39,51 @@
 /// final report = aggregator.generateReport();
 /// loader.dispose();
 /// ```
+///
+/// ## Parallel Analysis (Large Codebases)
+///
+/// For large codebases, use [ParallelAnalyzer] for memory-efficient
+/// concurrent file analysis:
+///
+/// ```dart
+/// final analyzer = ParallelAnalyzer(
+///   'lib',
+///   config: ParallelAnalysisConfig(
+///     maxConcurrency: 4,  // Concurrent file analyses
+///     chunkSize: 50,      // Files per memory batch
+///   ),
+/// );
+///
+/// // With progress tracking
+/// final report = await analyzer.analyzeWithProgress(
+///   onProgress: (completed, total, file) {
+///     print('[$completed/$total] Analyzing $file');
+///   },
+/// );
+///
+/// print('Health Score: ${report.healthScore}');
+/// await analyzer.dispose();
+/// ```
+///
+/// For streaming results (memory-efficient for very large projects):
+///
+/// ```dart
+/// await for (final result in analyzer.analyzeStream()) {
+///   if (result.isSuccess) {
+///     print('${result.path}: MI=${result.fileResult!.averageMaintainabilityIndex}');
+///   }
+/// }
+/// ```
 library;
 
 // High-level API
 export 'api/anteater.dart' show Anteater;
+export 'api/parallel_analyzer.dart'
+    show
+        ParallelAnalyzer,
+        ParallelAnalysisConfig,
+        FileAnalysisResult,
+        AnalysisProgressCallback;
 
 // Frontend - Dart/Kernel parsing
 export 'frontend/source_loader.dart' show SourceLoader;

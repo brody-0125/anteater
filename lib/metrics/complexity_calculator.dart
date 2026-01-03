@@ -363,7 +363,18 @@ class _HalsteadVisitor extends RecursiveAstVisitor<void> {
   }
 }
 
-/// Halstead complexity metrics.
+/// Halstead software science metrics.
+///
+/// Measures program complexity by analyzing operators and operands:
+/// - **Operators**: Keywords, punctuation, arithmetic/logical operators
+/// - **Operands**: Variables, literals, identifiers
+///
+/// Key derived metrics:
+/// - [volume]: Information content of the code
+/// - [difficulty]: How hard the code is to write/understand
+/// - [effort]: Mental effort required to develop
+///
+/// Reference: Maurice Halstead, "Elements of Software Science" (1977)
 class HalsteadMetrics {
   const HalsteadMetrics({
     required this.n1,

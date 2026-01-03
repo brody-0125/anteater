@@ -12,6 +12,9 @@ import 'package:anteater/rules/rules/safety/no_empty_block_rule.dart';
 import 'package:anteater/rules/rules/safety/no_equal_then_else_rule.dart';
 import 'package:anteater/rules/rules/quality/prefer_first_last_rule.dart';
 import 'package:anteater/rules/rules/quality/binary_expression_order_rule.dart';
+import 'package:anteater/rules/rules/quality/prefer_async_await_rule.dart';
+import 'package:anteater/rules/rules/quality/prefer_trailing_comma_rule.dart';
+import 'package:anteater/rules/rules/quality/avoid_unnecessary_cast_rule.dart';
 
 void main() {
   group('RuleRegistry', () {
@@ -416,6 +419,219 @@ void main() {
   if (x == 0) {
     print('zero');
   }
+}
+''';
+        final result = parseString(content: code);
+        final violations = rule.check(result.unit, lineInfo: result.lineInfo);
+
+        expect(violations, isEmpty);
+      });
+    });
+
+    group('PreferAsyncAwaitRule', () {
+      late PreferAsyncAwaitRule rule;
+
+      setUp(() {
+        rule = PreferAsyncAwaitRule();
+      });
+
+      test('detects chained .then() calls', () {
+        const code = '''
+void main() {
+  Future.value(1).then((x) => x + 1).then((x) => print(x));
+}
+''';
+        final result = parseString(content: code);
+        final violations = rule.check(result.unit, lineInfo: result.lineInfo);
+
+        expect(violations, hasLength(1));
+        expect(violations.first.ruleId, equals('prefer-async-await'));
+      });
+
+      test('detects nested .then() in callback', () {
+        const code = '''
+void main() {
+  Future.value(1).then((x) {
+    Future.value(2).then((y) => print(y));
+  });
+}
+''';
+        final result = parseString(content: code);
+        final violations = rule.check(result.unit, lineInfo: result.lineInfo);
+
+        expect(violations.length, greaterThanOrEqualTo(1));
+      });
+
+      test('ignores single .then() without chaining', () {
+        const code = '''
+void main() {
+  Future.value(1).then((x) => print(x));
+}
+''';
+        final result = parseString(content: code);
+        final violations = rule.check(result.unit, lineInfo: result.lineInfo);
+
+        expect(violations, isEmpty);
+      });
+
+      test('ignores async/await code', () {
+        const code = '''
+Future<void> main() async {
+  var x = await Future.value(1);
+  print(x);
+}
+''';
+        final result = parseString(content: code);
+        final violations = rule.check(result.unit, lineInfo: result.lineInfo);
+
+        expect(violations, isEmpty);
+      });
+    });
+
+    group('PreferTrailingCommaRule', () {
+      late PreferTrailingCommaRule rule;
+
+      setUp(() {
+        rule = PreferTrailingCommaRule();
+      });
+
+      test('detects multiline argument list without trailing comma', () {
+        const code = '''
+void main() {
+  someFunction(
+    1,
+    2
+  );
+}
+
+void someFunction(int a, int b) {}
+''';
+        final result = parseString(content: code);
+        final violations = rule.check(result.unit, lineInfo: result.lineInfo);
+
+        expect(violations, hasLength(1));
+        expect(violations.first.ruleId, equals('prefer-trailing-comma'));
+      });
+
+      test('detects multiline list literal without trailing comma', () {
+        const code = '''
+void main() {
+  var list = [
+    1,
+    2,
+    3
+  ];
+}
+''';
+        final result = parseString(content: code);
+        final violations = rule.check(result.unit, lineInfo: result.lineInfo);
+
+        expect(violations, hasLength(1));
+      });
+
+      test('ignores single-line constructs', () {
+        const code = '''
+void someFunction(int a, int b) {}
+
+void main() {
+  var list = [1, 2, 3];
+  someFunction(1, 2);
+}
+''';
+        final result = parseString(content: code);
+        final violations = rule.check(result.unit, lineInfo: result.lineInfo);
+
+        expect(violations, isEmpty);
+      });
+
+      test('ignores multiline with trailing comma', () {
+        const code = '''
+void main() {
+  var list = [
+    1,
+    2,
+    3,
+  ];
+}
+''';
+        final result = parseString(content: code);
+        final violations = rule.check(result.unit, lineInfo: result.lineInfo);
+
+        expect(violations, isEmpty);
+      });
+    });
+
+    group('AvoidUnnecessaryCastRule', () {
+      late AvoidUnnecessaryCastRule rule;
+
+      setUp(() {
+        rule = AvoidUnnecessaryCastRule();
+      });
+
+      test('detects literal cast', () {
+        const code = '''
+void main() {
+  var x = 1 as int;
+}
+''';
+        final result = parseString(content: code);
+        final violations = rule.check(result.unit, lineInfo: result.lineInfo);
+
+        expect(violations, hasLength(1));
+        expect(violations.first.ruleId, equals('avoid-unnecessary-cast'));
+        expect(violations.first.message.toLowerCase(), contains('literal'));
+      });
+
+      test('detects double cast', () {
+        const code = '''
+void process(dynamic value) {
+  var x = (value as String) as String;
+}
+''';
+        final result = parseString(content: code);
+        final violations = rule.check(result.unit, lineInfo: result.lineInfo);
+
+        expect(violations, hasLength(1));
+        expect(violations.first.message.toLowerCase(), contains('double'));
+      });
+
+      test('detects cast after is check', () {
+        // Note: Rule requires ExpressionStatement, not variable declaration
+        const code = '''
+void process(Object x) {
+  if (x is String) {
+    x as String;
+  }
+}
+''';
+        final result = parseString(content: code);
+        final violations = rule.check(result.unit, lineInfo: result.lineInfo);
+
+        expect(violations, hasLength(1));
+        expect(violations.first.message.toLowerCase(), contains('type promotion'));
+      });
+
+      test('detects always-true is Object check', () {
+        const code = '''
+void main() {
+  var x = 'hello';
+  if (x is Object) {
+    print('always true');
+  }
+}
+''';
+        final result = parseString(content: code);
+        final violations = rule.check(result.unit, lineInfo: result.lineInfo);
+
+        expect(violations, hasLength(1));
+        expect(violations.first.message.toLowerCase(), contains('always true'));
+      });
+
+      test('ignores necessary casts', () {
+        const code = '''
+void main() {
+  Object x = 'hello';
+  var y = x as String;
 }
 ''';
         final result = parseString(content: code);

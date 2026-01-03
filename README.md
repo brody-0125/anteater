@@ -209,10 +209,10 @@ Anteater includes 10 production-ready style rules:
 
 ```bash
 # Run all enabled rules
-anteater rules --path lib
+anteater analyze -p lib
 
 # Output as JSON
-anteater rules --path lib --format json
+anteater analyze -p lib -f json
 ```
 
 ## Configuration
@@ -276,10 +276,9 @@ dart pub global activate anteater
 dart pub global activate --source path .
 
 # Then run from anywhere
-anteater analyze --path /path/to/project
-anteater metrics --path /path/to/project
-anteater rules --path /path/to/project
-anteater debt --path /path/to/project
+anteater analyze -p /path/to/project
+anteater metrics -p /path/to/project
+anteater debt -p /path/to/project
 ```
 
 ## Library Usage

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/source/line_info.dart';
 
 import 'complexity_calculator.dart';
 
@@ -19,7 +20,9 @@ class MaintainabilityIndexCalculator {
   final ComplexityCalculator _complexityCalculator;
 
   /// Calculates the maintainability index for a function/method.
-  MaintainabilityResult calculate(FunctionBody body) {
+  ///
+  /// If [lineInfo] is provided, it will be used for accurate LOC counting.
+  MaintainabilityResult calculate(FunctionBody body, [LineInfo? lineInfo]) {
     final cyclomaticComplexity =
         _complexityCalculator.calculateCyclomaticComplexity(body);
 
@@ -28,7 +31,7 @@ class MaintainabilityIndexCalculator {
 
     final halstead = _complexityCalculator.calculateHalsteadMetrics(body);
 
-    final linesOfCode = _countLines(body);
+    final linesOfCode = _countLines(body, lineInfo);
 
     final mi = _computeMI(
       halsteadVolume: halstead.volume,
@@ -51,11 +54,12 @@ class MaintainabilityIndexCalculator {
     final functions = <String, MaintainabilityResult>{};
     var totalMI = 0.0;
     var count = 0;
+    final lineInfo = unit.lineInfo;
 
     for (final declaration in unit.declarations) {
       if (declaration is FunctionDeclaration) {
         final body = declaration.functionExpression.body;
-        final result = calculate(body);
+        final result = calculate(body, lineInfo);
         functions[declaration.name.lexeme] = result;
         totalMI += result.maintainabilityIndex;
         count++;
@@ -63,7 +67,7 @@ class MaintainabilityIndexCalculator {
         for (final member in declaration.members) {
           if (member is MethodDeclaration) {
             final body = member.body;
-            final result = calculate(body);
+            final result = calculate(body, lineInfo);
             final name = '${declaration.name.lexeme}.${member.name.lexeme}';
             functions[name] = result;
             totalMI += result.maintainabilityIndex;
@@ -99,9 +103,17 @@ class MaintainabilityIndexCalculator {
     return math.max(0, mi * 100 / 171);
   }
 
-  /// Counts lines by counting newline characters.
-  /// ADR-016 2.2: Avoids allocating a list via split().
-  int _countLines(AstNode node) {
+  /// Counts lines by using AST line information.
+  /// Falls back to counting newlines in toSource() if lineInfo is not available.
+  int _countLines(AstNode node, [LineInfo? lineInfo]) {
+    // Use AST line info if available (from CompilationUnit)
+    if (lineInfo != null) {
+      final startLine = lineInfo.getLocation(node.offset).lineNumber;
+      final endLine = lineInfo.getLocation(node.end).lineNumber;
+      return endLine - startLine + 1;
+    }
+
+    // Fallback: count newlines in source (less accurate)
     final source = node.toSource();
     var count = 1;
     for (var i = 0; i < source.length; i++) {
@@ -118,6 +130,22 @@ class MaintainabilityIndexCalculator {
 }
 
 /// Result of maintainability calculation for a single function.
+///
+/// Contains the Maintainability Index (MI) and all contributing metrics.
+/// Use [rating] to quickly categorize the result:
+/// - `good` (MI >= 80): Easy to maintain
+/// - `moderate` (50 <= MI < 80): Acceptable
+/// - `poor` (MI < 50): Needs refactoring
+///
+/// Example:
+/// ```dart
+/// final calculator = MaintainabilityIndexCalculator();
+/// final result = calculator.calculate(functionBody);
+/// print('MI: ${result.maintainabilityIndex}');
+/// if (result.rating == MaintainabilityRating.poor) {
+///   print('Consider refactoring this function');
+/// }
+/// ```
 class MaintainabilityResult {
   const MaintainabilityResult({
     required this.maintainabilityIndex,
@@ -128,11 +156,22 @@ class MaintainabilityResult {
     required this.rating,
   });
 
+  /// The Maintainability Index (0-100, higher is better).
   final double maintainabilityIndex;
+
+  /// McCabe's cyclomatic complexity (number of linearly independent paths).
   final int cyclomaticComplexity;
+
+  /// SonarQube cognitive complexity (how hard code is to understand).
   final int cognitiveComplexity;
+
+  /// Halstead software science metrics.
   final HalsteadMetrics halsteadMetrics;
+
+  /// Total lines of code in the function body.
   final int linesOfCode;
+
+  /// Rating category based on MI thresholds.
   final MaintainabilityRating rating;
 
   @override
@@ -147,6 +186,18 @@ MaintainabilityResult(
 }
 
 /// Result of maintainability calculation for an entire file.
+///
+/// Aggregates [MaintainabilityResult] for all functions and methods in a file.
+/// Use [needsAttention] to identify functions that require refactoring.
+///
+/// Example:
+/// ```dart
+/// final calculator = MaintainabilityIndexCalculator();
+/// final result = calculator.calculateForFile(compilationUnit);
+/// for (final fn in result.needsAttention) {
+///   print('${fn.key}: MI=${fn.value.maintainabilityIndex}');
+/// }
+/// ```
 class FileMaintainabilityResult {
   const FileMaintainabilityResult({
     required this.functions,
@@ -154,8 +205,15 @@ class FileMaintainabilityResult {
     required this.rating,
   });
 
+  /// Map of function/method names to their maintainability results.
+  ///
+  /// Class methods are prefixed with class name: `ClassName.methodName`.
   final Map<String, MaintainabilityResult> functions;
+
+  /// Average MI across all functions in the file.
   final double averageMaintainabilityIndex;
+
+  /// Rating based on [averageMaintainabilityIndex].
   final MaintainabilityRating rating;
 
   /// Returns functions that need attention (MI < 50).

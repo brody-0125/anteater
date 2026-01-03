@@ -35,6 +35,28 @@ enum RuleCategory {
 ///
 /// Implement this class to create custom rules that analyze
 /// Dart AST and report violations.
+///
+/// Example:
+/// ```dart
+/// class AvoidPrintRule extends StyleRule {
+///   @override
+///   String get id => 'avoid-print';
+///
+///   @override
+///   String get description => 'Avoid using print in production code.';
+///
+///   @override
+///   RuleSeverity get defaultSeverity => RuleSeverity.warning;
+///
+///   @override
+///   RuleCategory get category => RuleCategory.quality;
+///
+///   @override
+///   List<Violation> check(CompilationUnit unit, {LineInfo? lineInfo}) {
+///     // Analyze AST and return violations
+///   }
+/// }
+/// ```
 abstract class StyleRule {
   /// Unique identifier for this rule (e.g., 'avoid-dynamic').
   String get id;
@@ -178,6 +200,22 @@ class SourcePosition {
 }
 
 /// Settings for a specific rule.
+///
+/// Each rule can have individual settings including:
+/// - [enabled]: Whether the rule is active
+/// - [severity]: Override the default severity level
+/// - [options]: Rule-specific configuration options
+/// - [exclude]: File patterns to skip for this rule
+///
+/// Example in YAML:
+/// ```yaml
+/// rules:
+///   - avoid-dynamic:
+///       enabled: true
+///       severity: warning
+///       exclude:
+///         - 'lib/generated/**'
+/// ```
 class RuleSettings {
   /// Private const constructor for internal use and static instances.
   const RuleSettings._({

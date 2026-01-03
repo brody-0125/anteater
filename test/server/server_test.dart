@@ -1,8 +1,12 @@
-import 'package:test/test.dart';
-import 'package:anteater/server/language_server.dart';
+import 'dart:io';
+
+import 'package:anteater/frontend/source_loader.dart';
 import 'package:anteater/server/code_actions_provider.dart';
-import 'package:anteater/server/hover_provider.dart';
 import 'package:anteater/server/diagnostics_provider.dart';
+import 'package:anteater/server/hover_provider.dart';
+import 'package:anteater/server/language_server.dart';
+import 'package:path/path.dart' as path;
+import 'package:test/test.dart';
 
 void main() {
   group('Diagnostic', () {
@@ -450,6 +454,441 @@ void main() {
       final str = result.toString();
       expect(str, contains('files: 5'));
       expect(str, contains('diagnostics: 0'));
+    });
+  });
+
+  // ===========================================================================
+  // Integration Tests - Real File Analysis
+  // ===========================================================================
+
+  group('AnteaterLanguageServer Integration', () {
+    late Directory tempDir;
+    late String tempPath;
+    late AnteaterLanguageServer server;
+    bool serverInitialized = false;
+
+    setUp(() {
+      tempDir = Directory.systemTemp.createTempSync('anteater_server_test_');
+      tempPath = tempDir.path;
+      server = AnteaterLanguageServer(tempPath);
+      serverInitialized = false;
+    });
+
+    tearDown(() async {
+      if (serverInitialized) {
+        await server.shutdown();
+      }
+      tempDir.deleteSync(recursive: true);
+    });
+
+    test('throws StateError when not initialized', () async {
+      final dartFile = File(path.join(tempPath, 'test.dart'));
+      dartFile.writeAsStringSync('void main() {}');
+
+      expect(
+        () => server.analyzeFile(dartFile.path),
+        throwsA(isA<StateError>()),
+      );
+      // Don't mark as initialized since it should fail
+    });
+
+    test('analyzes simple file without diagnostics', () async {
+      final dartFile = File(path.join(tempPath, 'simple.dart'));
+      dartFile.writeAsStringSync('''
+void main() {
+  print('Hello');
+}
+''');
+
+      await server.initialize();
+      serverInitialized = true;
+      final diagnostics = await server.analyzeFile(dartFile.path);
+
+      expect(diagnostics, isEmpty);
+    });
+
+    test('detects high cyclomatic complexity', () async {
+      final dartFile = File(path.join(tempPath, 'complex.dart'));
+      // Generate a function with CC > 20 (threshold)
+      // Each if/else-if adds 1 to CC, so we need at least 21 branches
+      dartFile.writeAsStringSync('''
+int complexFunction(int x) {
+  if (x == 1) return 1;
+  else if (x == 2) return 2;
+  else if (x == 3) return 3;
+  else if (x == 4) return 4;
+  else if (x == 5) return 5;
+  else if (x == 6) return 6;
+  else if (x == 7) return 7;
+  else if (x == 8) return 8;
+  else if (x == 9) return 9;
+  else if (x == 10) return 10;
+  else if (x == 11) return 11;
+  else if (x == 12) return 12;
+  else if (x == 13) return 13;
+  else if (x == 14) return 14;
+  else if (x == 15) return 15;
+  else if (x == 16) return 16;
+  else if (x == 17) return 17;
+  else if (x == 18) return 18;
+  else if (x == 19) return 19;
+  else if (x == 20) return 20;
+  else if (x == 21) return 21;
+  else if (x == 22) return 22;
+  else return 0;
+}
+''');
+
+      await server.initialize();
+      serverInitialized = true;
+      final diagnostics = await server.analyzeFile(dartFile.path);
+
+      expect(diagnostics.any((d) => d.code == 'high_cyclomatic_complexity'),
+          isTrue);
+    });
+
+    test('analyzeProject analyzes multiple files', () async {
+      File(path.join(tempPath, 'file1.dart'))
+          .writeAsStringSync('void func1() { print("1"); }');
+      File(path.join(tempPath, 'file2.dart'))
+          .writeAsStringSync('void func2() { print("2"); }');
+
+      await server.initialize();
+      serverInitialized = true;
+      final result = await server.analyzeProject();
+
+      expect(result.fileCount, equals(2));
+    });
+
+    test('returns empty diagnostics for non-existent file', () async {
+      await server.initialize();
+      serverInitialized = true;
+      final diagnostics =
+          await server.analyzeFile(path.join(tempPath, 'nonexistent.dart'));
+
+      expect(diagnostics, isEmpty);
+    });
+
+    test('initialize is idempotent', () async {
+      await server.initialize();
+      serverInitialized = true;
+      await server.initialize(); // Should not throw
+
+      final dartFile = File(path.join(tempPath, 'test.dart'));
+      dartFile.writeAsStringSync('void main() {}');
+
+      final diagnostics = await server.analyzeFile(dartFile.path);
+      expect(diagnostics, isEmpty);
+    });
+  });
+
+  group('DiagnosticsProvider Integration', () {
+    late Directory tempDir;
+    late String tempPath;
+    late SourceLoader loader;
+    late DiagnosticsProvider provider;
+
+    setUp(() {
+      tempDir = Directory.systemTemp.createTempSync('anteater_diag_test_');
+      tempPath = tempDir.path;
+      loader = SourceLoader(tempPath);
+      provider = DiagnosticsProvider(sourceLoader: loader);
+    });
+
+    tearDown(() async {
+      await loader.dispose();
+      tempDir.deleteSync(recursive: true);
+    });
+
+    test('analyzes file with metrics diagnostics', () async {
+      final dartFile = File(path.join(tempPath, 'metrics.dart'));
+      dartFile.writeAsStringSync('''
+void simpleFunction() {
+  var x = 1;
+  print(x);
+}
+''');
+
+      final diagnostics = await provider.analyze(dartFile.path);
+
+      // Simple function should pass all thresholds
+      expect(
+          diagnostics.where((d) =>
+              d.code == 'high_cyclomatic_complexity' ||
+              d.code == 'high_cognitive_complexity'),
+          isEmpty);
+    });
+
+    test('detects long function', () async {
+      final dartFile = File(path.join(tempPath, 'long.dart'));
+      // Generate a function with >100 lines using print statements
+      // (toSource() preserves print statements on separate lines)
+      final lines = List.generate(120, (i) => "  print('line $i');").join('\n');
+      dartFile.writeAsStringSync('''
+void longFunction() {
+$lines
+}
+''');
+
+      final diagnostics = await provider.analyze(dartFile.path);
+
+      expect(diagnostics.any((d) => d.code == 'function_too_long'), isTrue);
+    });
+
+    test('custom thresholds are applied', () async {
+      final strictProvider = DiagnosticsProvider(
+        sourceLoader: loader,
+        thresholds: const DiagnosticThresholds(
+          cyclomaticComplexity: 1, // Very strict
+          cognitiveComplexity: 1,
+          maintainabilityIndex: 99.0,
+          linesOfCode: 5,
+        ),
+      );
+
+      final dartFile = File(path.join(tempPath, 'strict.dart'));
+      dartFile.writeAsStringSync('''
+void mediumFunction(int x) {
+  if (x > 0) {
+    print('positive');
+  } else {
+    print('non-positive');
+  }
+}
+''');
+
+      final diagnostics = await strictProvider.analyze(dartFile.path);
+
+      // With strict thresholds, this should trigger warnings
+      expect(diagnostics, isNotEmpty);
+    });
+
+    test('returns empty diagnostics for non-existent file', () async {
+      final diagnostics =
+          await provider.analyze(path.join(tempPath, 'missing.dart'));
+
+      expect(diagnostics, isEmpty);
+    });
+
+    test('analyzes style rules', () async {
+      final dartFile = File(path.join(tempPath, 'style.dart'));
+      dartFile.writeAsStringSync('''
+// ignore_for_file: unused_local_variable
+
+void test() {
+  dynamic x = 1;  // avoid-dynamic violation
+}
+''');
+
+      final diagnostics = await provider.analyze(dartFile.path);
+
+      // Should detect avoid-dynamic rule violation
+      expect(diagnostics.any((d) => d.code == 'avoid-dynamic'), isTrue);
+    });
+  });
+
+  group('HoverProvider Integration', () {
+    late Directory tempDir;
+    late String tempPath;
+    late SourceLoader loader;
+    late HoverProvider provider;
+
+    setUp(() {
+      tempDir = Directory.systemTemp.createTempSync('anteater_hover_test_');
+      tempPath = tempDir.path;
+      loader = SourceLoader(tempPath);
+      provider = HoverProvider(sourceLoader: loader);
+    });
+
+    tearDown(() async {
+      await loader.dispose();
+      tempDir.deleteSync(recursive: true);
+    });
+
+    test('returns null for non-existent file', () async {
+      final hover = await provider.getHover(
+        filePath: path.join(tempPath, 'missing.dart'),
+        position: const Position(line: 0, character: 0),
+      );
+
+      expect(hover, isNull);
+    });
+
+    test('returns hover info for function', () async {
+      final dartFile = File(path.join(tempPath, 'func.dart'));
+      dartFile.writeAsStringSync('''
+void testFunction() {
+  var x = 1;
+  print(x);
+}
+''');
+
+      final hover = await provider.getHover(
+        filePath: dartFile.path,
+        position: const Position(line: 1, character: 5), // Inside function body
+      );
+
+      expect(hover, isNotNull);
+      expect(hover!.contents.kind, equals(MarkupKind.markdown));
+      expect(hover.contents.value, contains('testFunction'));
+      expect(hover.contents.value, contains('Cyclomatic Complexity'));
+    });
+
+    test('returns hover info for class', () async {
+      final dartFile = File(path.join(tempPath, 'cls.dart'));
+      dartFile.writeAsStringSync('''
+class TestClass {
+  final int value;
+
+  TestClass(this.value);
+
+  void method() {
+    print(value);
+  }
+}
+''');
+
+      final hover = await provider.getHover(
+        filePath: dartFile.path,
+        position: const Position(line: 1, character: 5), // Inside class
+      );
+
+      expect(hover, isNotNull);
+      expect(hover!.contents.value, contains('TestClass'));
+    });
+
+    test('returns null for position outside code', () async {
+      final dartFile = File(path.join(tempPath, 'pos.dart'));
+      dartFile.writeAsStringSync('void main() {}');
+
+      final hover = await provider.getHover(
+        filePath: dartFile.path,
+        position: const Position(line: 100, character: 0), // Beyond file
+      );
+
+      expect(hover, isNull);
+    });
+
+    test('hover shows Halstead metrics for complex function', () async {
+      final dartFile = File(path.join(tempPath, 'halstead.dart'));
+      dartFile.writeAsStringSync('''
+int calculate(int a, int b, int c) {
+  var sum = a + b + c;
+  var product = a * b * c;
+  var result = sum + product;
+  return result;
+}
+''');
+
+      final hover = await provider.getHover(
+        filePath: dartFile.path,
+        position: const Position(line: 1, character: 5),
+      );
+
+      expect(hover, isNotNull);
+      expect(hover!.contents.value, contains('Halstead'));
+    });
+  });
+
+  group('CodeActionsProvider Integration', () {
+    late CodeActionsProvider provider;
+
+    setUp(() {
+      provider = CodeActionsProvider();
+    });
+
+    test('returns actions for cognitive complexity', () async {
+      const diagnostic = Diagnostic(
+        message: 'High cognitive complexity',
+        severity: DiagnosticSeverity.hint,
+        range: Range.zero,
+        source: 'anteater',
+        code: 'high_cognitive_complexity',
+      );
+
+      final actions = await provider.getCodeActions(
+        filePath: '/test.dart',
+        range: Range.zero,
+        diagnostics: [diagnostic],
+      );
+
+      expect(actions.length, equals(2));
+      expect(actions.any((a) => a.title.contains('Simplify')), isTrue);
+      expect(actions.any((a) => a.title.contains('Extract')), isTrue);
+    });
+
+    test('returns actions for low maintainability', () async {
+      const diagnostic = Diagnostic(
+        message: 'Low MI',
+        severity: DiagnosticSeverity.warning,
+        range: Range.zero,
+        source: 'anteater',
+        code: 'low_maintainability_index',
+      );
+
+      final actions = await provider.getCodeActions(
+        filePath: '/test.dart',
+        range: Range.zero,
+        diagnostics: [diagnostic],
+      );
+
+      expect(actions.length, equals(2));
+      expect(actions.any((a) => a.title.contains('maintainability')), isTrue);
+      expect(actions.any((a) => a.title.contains('documentation')), isTrue);
+    });
+
+    test('returns actions for mutable shared state', () async {
+      const diagnostic = Diagnostic(
+        message: 'Mutable state',
+        severity: DiagnosticSeverity.info,
+        range: Range.zero,
+        source: 'anteater',
+        code: 'mutable_shared_state',
+      );
+
+      final actions = await provider.getCodeActions(
+        filePath: '/test.dart',
+        range: Range.zero,
+        diagnostics: [diagnostic],
+      );
+
+      expect(actions.length, equals(2));
+      expect(actions.any((a) => a.title.contains('final')), isTrue);
+      expect(actions.any((a) => a.title.contains('immutable')), isTrue);
+    });
+
+    test('returns actions for semantic clone', () async {
+      const diagnostic = Diagnostic(
+        message: 'Semantic clone detected',
+        severity: DiagnosticSeverity.info,
+        range: Range.zero,
+        source: 'anteater',
+        code: 'semantic_clone',
+      );
+
+      final actions = await provider.getCodeActions(
+        filePath: '/test.dart',
+        range: Range.zero,
+        diagnostics: [diagnostic],
+      );
+
+      expect(actions.length, equals(2));
+      expect(actions[0].isPreferred, isTrue);
+      expect(actions.any((a) => a.title.contains('common function')), isTrue);
+    });
+
+    test('applyCodeAction returns null (not yet implemented)', () async {
+      const action = CodeAction(
+        title: 'Test',
+        kind: CodeActionKind.quickfix,
+      );
+
+      final edit = await provider.applyCodeAction(
+        filePath: '/test.dart',
+        action: action,
+      );
+
+      expect(edit, isNull);
     });
   });
 }

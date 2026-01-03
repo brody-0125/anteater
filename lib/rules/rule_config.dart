@@ -7,7 +7,24 @@ import 'rule_registry.dart';
 
 /// Configuration for style rules.
 ///
-/// Parses YAML configuration and provides rule settings.
+/// Parses `analysis_options.yaml` configuration under the `anteater` key.
+///
+/// Example YAML configuration:
+/// ```yaml
+/// anteater:
+///   exclude:
+///     - '**.g.dart'
+///     - 'test/**'
+///   rules:
+///     - avoid-dynamic
+///     - avoid-global-state:
+///         severity: warning
+///   metrics:
+///     cyclomatic-complexity: 20
+///     cognitive-complexity: 15
+/// ```
+///
+/// Use [RuleConfig.fromYaml] or [RuleConfig.fromFile] to load configuration.
 class RuleConfig {
   const RuleConfig({
     this.excludePatterns = const [],
